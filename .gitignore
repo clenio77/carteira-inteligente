@@ -1,0 +1,47 @@
+# General
+.DS_Store
+.env
+.env.local
+.venv
+node_modules/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesus
+
+# Frontend (Next.js)
+apps/web/.next/
+apps/web/node_modules/
+apps/web/out/
+apps/web/build/
+apps/web/.vercel
+
+# Backend (FastAPI)
+apps/api/config.py
+apps/api/venv/
+apps/api/__pycache__/
+apps/api/*.db
+apps/api/*.sqlite3
+apps/api/carteira.db
+apps/api/carteira_dev.db
+
+# IDE
+.vscode/
+.idea/
