@@ -6,14 +6,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: '/api/:path*',
-      },
-    ];
-  },
+  // rewrites removed to use vercel.json
 };
 
 import withPWAInit from 'next-pwa';
