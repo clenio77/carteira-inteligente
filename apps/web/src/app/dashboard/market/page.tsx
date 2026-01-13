@@ -46,7 +46,11 @@ const DEFAULT_TICKERS = [
     "WEGE3",
 ];
 
-export default function MarketPage() {
+import { Suspense } from "react";
+
+// ... imports remain the same ...
+
+function MarketContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [searchQuery, setSearchQuery] = useState("");
@@ -314,7 +318,7 @@ export default function MarketPage() {
                     )}
                 </div>
 
-                {/* Selected Stock Detail - IMPROVED */}
+                {/* Selected Stock Detail */}
                 {selectedTicker && (
                     <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                         <div className="flex items-center justify-between mb-6">
@@ -613,6 +617,21 @@ export default function MarketPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function MarketPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-primary-600 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600">Carregando...</p>
+                </div>
+            </div>
+        }>
+            <MarketContent />
+        </Suspense>
     );
 }
 
