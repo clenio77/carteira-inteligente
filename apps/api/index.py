@@ -55,6 +55,14 @@ app = FastAPI(
     root_path="/api",
 )
 
+# Middleware to strip /api prefix if present (Vercel workaround)
+@app.middleware("http")
+async def strip_api_prefix(request, call_next):
+    if request.url.path.startswith("/api"):
+        request.scope["path"] = request.url.path[4:]
+    response = await call_next(request)
+    return response
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
