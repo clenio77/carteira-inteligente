@@ -5,7 +5,21 @@
   ],
   "globalEnv": [
     "NEXT_PUBLIC_API_URL",
-    "NODE_ENV"
+    "NODE_ENV",
+    "APP_NAME",
+    "APP_VERSION",
+    "DEBUG",
+    "ENVIRONMENT",
+    "DATABASE_URL",
+    "ALGORITHM",
+    "ACCESS_TOKEN_EXPIRE_MINUTES",
+    "ALLOWED_ORIGINS",
+    "CEI_BASE_URL",
+    "BRAPI_TOKEN",
+    "GOOGLE_API_KEY",
+    "SUPABASE_PASSWORD",
+    "SUPABASE_URL",
+    "SECRET_KEY"
   ],
   "tasks": {
     "build": {
