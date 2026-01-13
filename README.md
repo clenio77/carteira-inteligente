@@ -136,5 +136,10 @@ MIT
 
 ## 👥 Autores
 
-Desenvolvido seguindo o PRD v1.5 por John (PM)
+Desenvolvido por **Clenio Consultory**.
+
+Projeto baseado no PRD v1.5.
+
+---
+© 2026 Clenio Consultory. Todos os direitos reservados.
 
