@@ -159,8 +159,8 @@ export const getMarketHighlights = async (limit: number = 8): Promise<SearchResp
 /**
  * Helper: Format currency
  */
-export const formatCurrency = (value: number | null): string => {
-  if (value === null) return 'N/A';
+export const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return 'N/A';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -170,8 +170,8 @@ export const formatCurrency = (value: number | null): string => {
 /**
  * Helper: Format percentage
  */
-export const formatPercent = (value: number | null): string => {
-  if (value === null) return 'N/A';
+export const formatPercent = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return 'N/A';
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;
 };
@@ -179,8 +179,8 @@ export const formatPercent = (value: number | null): string => {
 /**
  * Helper: Format large numbers
  */
-export const formatLargeNumber = (value: number | null): string => {
-  if (value === null) return 'N/A';
+export const formatLargeNumber = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return 'N/A';
   if (value >= 1e12) return `${(value / 1e12).toFixed(1)}T`;
   if (value >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
   if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
