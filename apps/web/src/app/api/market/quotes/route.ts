@@ -39,7 +39,11 @@ export async function GET(request: NextRequest) {
             updated_at: item.regularMarketTime
         }));
 
-        return NextResponse.json(quotes);
+        return NextResponse.json(quotes, {
+            headers: {
+                'Cache-Control': 's-maxage=60, stale-while-revalidate=300'
+            }
+        });
 
     } catch (error) {
         console.error('Market quotes error:', error);
