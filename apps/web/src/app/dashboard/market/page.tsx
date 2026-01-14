@@ -505,7 +505,7 @@ function MarketContent() {
                                             <Target className="w-4 h-4 text-green-500" />
                                         </div>
                                         <p className="text-xl font-bold text-gray-900">
-                                            {selectedStock.eps ? `R$ ${selectedStock.eps.toFixed(2)}` : "N/A"}
+                                            {selectedStock.eps ? `R$ ${selectedStock.eps?.toFixed(2)}` : "N/A"}
                                         </p>
                                         <p className="text-xs text-gray-400">Lucro por Ação</p>
                                     </div>
@@ -518,7 +518,7 @@ function MarketContent() {
                                         </div>
                                         <p className="text-xl font-bold text-gray-900">
                                             {selectedStock.dividend_yield
-                                                ? `${selectedStock.dividend_yield.toFixed(2)}%`
+                                                ? `${selectedStock.dividend_yield?.toFixed(2)}%`
                                                 : "N/A"}
                                         </p>
                                         <p className="text-xs text-gray-400">Rendimento anual</p>
