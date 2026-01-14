@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         // Prepare prompt for brokerage note analysis
         const prompt = `Analise esta nota de corretagem e extraia as seguintes informações em formato JSON:
