@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-001' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         // Prepare prompt for brokerage note analysis
         const prompt = `Analise esta nota de corretagem e extraia as seguintes informações em formato JSON:
@@ -71,15 +71,38 @@ Se alguma informação não estiver clara ou não for encontrada, use null.
 Retorne APENAS o JSON, sem explicações adicionais.`;
 
 
-        const result = await model.generateContent([
-            prompt,
-            {
-                inlineData: {
-                    mimeType: file.type,
-                    data: base64
+        // Call Gemini with retry logic
+        let result;
+        let lastError;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                result = await model.generateContent([
+                    prompt,
+                    {
+                        inlineData: {
+                            mimeType: file.type,
+                            data: base64
+                        }
+                    }
+                ]);
+                break; // Success
+            } catch (err: any) {
+                console.warn(`Attempt ${attempt} failed:`, err.message);
+                lastError = err;
+                if (err.message && err.message.includes('429')) {
+                    // Wait 2s before retry on rate limit
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                    // For other errors, maybe don't retry or wait less
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
-        ]);
+        }
+
+        if (!result) {
+            throw lastError || new Error('Failed to generate content after retries');
+        }
 
         const response = result.response;
         const text = response.text();

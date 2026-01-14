@@ -39,7 +39,11 @@ export async function GET(request: NextRequest) {
             updated_at: item.regularMarketTime
         }));
 
-        return NextResponse.json(quotes, {
+        return NextResponse.json({
+            success: true,
+            count: quotes.length,
+            quotes: quotes
+        }, {
             headers: {
                 'Cache-Control': 's-maxage=60, stale-while-revalidate=300'
             }
