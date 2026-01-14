@@ -39,11 +39,6 @@ const DEFAULT_TICKERS = [
     "PETR4",
     "VALE3",
     "ITUB4",
-    "BBDC4",
-    "ABEV3",
-    "MGLU3",
-    "BBAS3",
-    "WEGE3",
 ];
 
 import { Suspense } from "react";
@@ -83,8 +78,9 @@ function MarketContent() {
     } = useQuery({
         queryKey: ["marketQuotes", DEFAULT_TICKERS],
         queryFn: () => getMultipleQuotes(DEFAULT_TICKERS, true),
-        refetchInterval: 60000,
-        staleTime: 30000,
+        refetchInterval: 120000, // 2 minutos
+        staleTime: 60000, // 1 minuto
+        retry: 1,
     });
 
     // Fetch selected stock detail
