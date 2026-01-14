@@ -272,12 +272,14 @@ export default function AddAssetsPage() {
         }
 
         setIsSearching(true);
+        setShowSearchResults(true); // Always show mechanism to allow manual entry
+
         try {
             const results = await searchStocks(query);
             setSearchResults(results.results.slice(0, 8));
-            setShowSearchResults(true);
         } catch (error) {
             console.error("Search error:", error);
+            setSearchResults([]);
         } finally {
             setIsSearching(false);
         }
@@ -416,7 +418,7 @@ export default function AddAssetsPage() {
                                     )}
 
                                     {/* Search Results Dropdown */}
-                                    {showSearchResults && searchResults.length > 0 && (
+                                    {showSearchResults && (
                                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                                             {searchResults.map((stock) => (
                                                 <button
@@ -434,6 +436,24 @@ export default function AddAssetsPage() {
                                                     )}
                                                 </button>
                                             ))}
+
+                                            {/* Manual Entry Option */}
+                                            {searchQuery.length >= 2 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => selectStock({ stock: searchQuery.toUpperCase(), name: searchQuery })}
+                                                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-t border-gray-100 text-primary-600 font-medium flex items-center bg-gray-50/50"
+                                                >
+                                                    <Plus className="w-4 h-4 mr-2" />
+                                                    <span>Usar "{searchQuery.toUpperCase()}" (Manual)</span>
+                                                </button>
+                                            )}
+
+                                            {searchResults.length === 0 && searchQuery.length >= 2 && !isSearching && (
+                                                <div className="px-4 py-2 text-xs text-gray-400 text-center">
+                                                    Ativo não encontrado na base de dados? Adicione-o manualmente acima.
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 

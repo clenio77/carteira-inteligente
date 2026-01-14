@@ -685,6 +685,10 @@ async def update_portfolio_prices(
     for position in positions:
         asset = db.query(Asset).filter(Asset.id == position.asset_id).first()
         if asset:
+            # Skip price updates for Fixed Income assets (handled manually or via different service)
+            if asset.type == AssetType.RENDA_FIXA:
+                continue
+                
             ticker = asset.ticker
             tickers.append(ticker)
             if ticker not in ticker_to_positions:
