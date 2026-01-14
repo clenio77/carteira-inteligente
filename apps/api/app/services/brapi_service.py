@@ -407,82 +407,71 @@ class BrapiService:
         ]
 
         try:
-            params = {}
-            if settings.BRAPI_TOKEN:
-                params["token"] = settings.BRAPI_TOKEN
-
-            tickers_str = ",".join(MAJOR_ASSETS)
+            # Use get_quotes to handle batching and caching automatically
+            # This avoids the URL length/ticker limit issue with the API
+            result = await BrapiService.get_quotes(MAJOR_ASSETS)
             
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                # Use the quote endpoint with explicit tickers
-                response = await client.get(
-                    f"{BrapiService.BASE_URL}/quote/{tickers_str}",
-                    params=params
-                )
-
-                if response.status_code == 200:
-                    data = response.json()
-                    results = data.get("results", [])
-                    
-                    # Normalize
-                    normalized_data = []
-                    for q in results:
-                        ticker = q.get("symbol")
-                        asset_type = BrapiService._determine_asset_type(ticker)
-
-                        normalized_data.append({
-                            "stock": ticker,
-                            "name": q.get("shortName"),
-                            "close": q.get("regularMarketPrice"),
-                            "change": q.get("regularMarketChangePercent"),
-                            "volume": q.get("regularMarketVolume"),
-                            "market_cap": q.get("marketCap"),
-                            "logo": q.get("logourl"),
-                            "type": asset_type
-                        })
-                    
-                    # Sort by Change % DESC (Top Gainers)
-                    normalized_data.sort(
-                        key=lambda x: x.get("change") or -999, 
-                        reverse=True
-                    )
-                    
-                    final_result = {
-                        "success": True,
-                        "data": normalized_data[:limit]
-                    }
-                    
-                    # update cache
-                    BrapiService._cache[CACHE_KEY] = final_result
-                    BrapiService._cache_expiry[CACHE_KEY] = now + CACHE_DURATION
-                    
-                    return final_result
+            if result["success"]:
+                quotes = result["data"]
                 
-                elif response.status_code == 429:
-                     logger.warning("Rate limit on highlights fetch. Returning fallback/cache.")
-                     if CACHE_KEY in BrapiService._cache:
-                         return BrapiService._cache[CACHE_KEY]
-                     
-                     # Hardcoded fallback if no cache
-                     fallback_list = list(BrapiService._fallback_data.values())
-                     
-                     # Normalize format to match API response
-                     normalized_fallback = []
-                     for item in fallback_list:
-                         normalized_fallback.append({
-                             "stock": item["symbol"],
-                             "name": item["shortName"],
-                             "close": item["regularMarketPrice"],
-                             "change": item["regularMarketChangePercent"],
-                             "volume": item["regularMarketVolume"],
-                             "market_cap": 0, # Mock does not have this, usage is safe
-                             "logo": item["logourl"],
-                             "type": BrapiService._determine_asset_type(item["symbol"])
-                         })
-                         
-                     return {"success": True, "data": normalized_fallback}
-                else:
-                    return {"success": False, "error": f"API error: {response.status_code}"}
+                # Normalize to SearchResult format
+                normalized_data = []
+                for q in quotes:
+                    ticker = q.get("ticker")
+                    asset_type = BrapiService._determine_asset_type(ticker)
+
+                    normalized_data.append({
+                        "stock": ticker,
+                        "name": q.get("name"),
+                        "close": q.get("price"),
+                        "change": q.get("change_percent"),
+                        "volume": q.get("volume"),
+                        "market_cap": q.get("market_cap"),
+                        "logo": q.get("logo_url"),
+                        "type": asset_type
+                    })
+                
+                # Sort by Change % DESC (Top Gainers)
+                normalized_data.sort(
+                    key=lambda x: x.get("change") or -999, 
+                    reverse=True
+                )
+                
+                final_result = {
+                    "success": True,
+                    "data": normalized_data[:limit]
+                }
+                
+                # update cache
+                BrapiService._cache[CACHE_KEY] = final_result
+                BrapiService._cache_expiry[CACHE_KEY] = now + CACHE_DURATION
+                
+                return final_result
+            else:
+                # If get_quotes failed completely (unlikely due to its own fallback)
+                logger.warning(f"get_quotes failed for highlights: {result.get('error')}")
+                raise Exception(result.get("error"))
+
+        except Exception as e:
+             logger.error(f"Error getting market highlights: {str(e)}")
+             if CACHE_KEY in BrapiService._cache:
+                 return BrapiService._cache[CACHE_KEY]
+             
+             # Fallback on exception
+             fallback_list = list(BrapiService._fallback_data.values())
+             normalized_fallback = []
+             for item in fallback_list:
+                  normalized_fallback.append({
+                        "stock": item["symbol"],
+                        "name": item["shortName"],
+                        "close": item["regularMarketPrice"],
+                        "change": item["regularMarketChangePercent"],
+                        "volume": item["regularMarketVolume"],
+                        "market_cap": 0,
+                        "logo": item["logourl"],
+                        "type": BrapiService._determine_asset_type(item["symbol"])
+                    })
+             return {"success": True, "data": normalized_fallback}
 
         except Exception as e:
              logger.error(f"Error getting market highlights: {str(e)}")
