@@ -393,7 +393,7 @@ function MarketContent() {
                                                 {selectedStock.change !== null && (
                                                     <>
                                                         {selectedStock.change >= 0 ? "+" : ""}
-                                                        {selectedStock.change.toFixed(2)}
+                                                        {selectedStock.change?.toFixed(2) ?? "0.00"}
                                                     </>
                                                 )}
                                             </span>
@@ -697,7 +697,7 @@ function QuoteCard({
                             className={`text-sm ${isPositive ? "text-green-600" : "text-red-600"}`}
                         >
                             {isPositive ? "+" : ""}
-                            {quote.change.toFixed(2)}
+                            {quote.change?.toFixed(2) ?? "0.00"}
                         </span>
                     )}
                 </div>
@@ -709,7 +709,7 @@ function QuoteCard({
                     <div className="flex justify-between text-xs">
                         <span className="text-gray-500">P/L</span>
                         <span className="font-medium text-gray-700">
-                            {quote.pe_ratio?.toFixed(2)}
+                            {quote.pe_ratio?.toFixed(2) ?? "N/A"}
                         </span>
                     </div>
                 )}
