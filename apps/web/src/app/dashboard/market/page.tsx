@@ -34,12 +34,6 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-// Default tickers to show
-const DEFAULT_TICKERS = [
-    "PETR4",
-    "VALE3",
-    "ITUB4",
-];
 
 import { Suspense } from "react";
 
@@ -69,19 +63,7 @@ function MarketContent() {
         }
     }, [searchParams]);
 
-    // Fetch multiple quotes
-    const {
-        data: quotesData,
-        isLoading: quotesLoading,
-        refetch: refetchQuotes,
-        isFetching,
-    } = useQuery({
-        queryKey: ["marketQuotes", DEFAULT_TICKERS],
-        queryFn: () => getMultipleQuotes(DEFAULT_TICKERS, true),
-        refetchInterval: 120000, // 2 minutos
-        staleTime: 60000, // 1 minuto
-        retry: 1,
-    });
+
 
     // Fetch selected stock detail
     const { data: selectedStock, isLoading: stockLoading, error: stockError } = useQuery({
@@ -152,16 +134,7 @@ function MarketContent() {
         }
     };
 
-    if (quotesLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 className="w-12 h-12 text-primary-600 animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600">Carregando cotações...</p>
-                </div>
-            </div>
-        );
-    }
+
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -181,13 +154,7 @@ function MarketContent() {
                         </h1>
                     </div>
                     <div className="flex items-center space-x-2">
-                        {isFetching && (
-                            <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
-                        )}
-                        <Button variant="outline" onClick={() => refetchQuotes()}>
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Atualizar
-                        </Button>
+                        {/* Removed auto-refresh button since we don't have a default list anymore */}
                     </div>
                 </div>
 
@@ -585,18 +552,6 @@ function MarketContent() {
                         )}
                     </div>
                 )}
-
-                {/* Quotes Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {quotesData?.quotes.map((quote) => (
-                        <QuoteCard
-                            key={quote.ticker}
-                            quote={quote}
-                            onClick={() => setSelectedTicker(quote.ticker)}
-                            isSelected={selectedTicker === quote.ticker}
-                        />
-                    ))}
-                </div>
 
                 {/* Info Banner */}
                 <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-4">

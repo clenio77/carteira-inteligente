@@ -374,11 +374,16 @@ class BrapiService:
 
         # REVERTED TO CURATED LIST: The generic /list endpoint returns weird assets (e.g. AZUL54).
         # We manually select the top liquid assets in Brazil to ensure users see relevant info.
-        # Kept list small (<20) to ensure we can fetch in ONE request.
+        # Kept list small (<30) to ensure we can fetch in ONE request.
         MAJOR_ASSETS = [
-            "PETR4", "VALE3", "ITUB4", "BBDC4", "WEGE3", "BBAS3", # Giants
-            "PRIO3", "MGLU3", "LREN3", "RAIL3", # High Volume / Retail
-            "HGLG11", "MXRF11", "XPLG11", "KNRI11" # Top FIIs
+            # Ibovespa Giants & High Volume
+            "PETR4", "VALE3", "ITUB4", "BBDC4", "BBAS3", "WEGE3", 
+            "ABEV3", "BPAC11", "ELET3", "RENT3", "SUZB3", "JBSS3", 
+            "PRIO3", "MGLU3", "LREN3", "RAIL3", "CMIG4", "GGBR4",
+            "HAPV3", "RDOR3", "CSAN3", "PETR3", "B3SA3", "VIBRA3",
+            # Top FIIs (Funds)
+            "HGLG11", "MXRF11", "XPLG11", "KNRI11", "XPML11", "VISC11", 
+            "BTLG11", "IRDM11", "KNCR11", "CPTS11"
         ]
 
         try:
@@ -403,8 +408,13 @@ class BrapiService:
                     normalized_data = []
                     for q in results:
                         ticker = q.get("symbol")
-                        asset_type = "fund" if ticker.endswith("11") else "stock"
-                        
+                        asset_type = "fund" if ticker.endswith("11") and not ticker.startswith("BPAC") else "stock" # Simple heuristic
+                        # BPAC11 is a Unit (Stock), not Fund. But 11 usually implies Fund. 
+                        # Refined heuristic: Check 'shortName' or just rely on manual buckets if needed.
+                        # For now, let's keep it simple or check explicit lists.
+                        if ticker in ["BPAC11", "TIET11", "KLBN11", "SANB11", "ALUP11", "TAEE11", "SAPR11"]:
+                            asset_type = "stock"
+
                         normalized_data.append({
                             "stock": ticker,
                             "name": q.get("shortName"),
@@ -416,9 +426,9 @@ class BrapiService:
                             "type": asset_type
                         })
                     
-                    # Sort by volume desc
+                    # Sort by Change % DESC (Top Gainers)
                     normalized_data.sort(
-                        key=lambda x: x.get("volume") or 0, 
+                        key=lambda x: x.get("change") or -999, 
                         reverse=True
                     )
                     
