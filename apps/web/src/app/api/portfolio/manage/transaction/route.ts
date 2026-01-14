@@ -66,12 +66,13 @@ export async function POST(request: NextRequest) {
         }
 
         const totalAmount = quantity * price + (fees || 0);
+        const userIdInt = parseInt(userId as string, 10);
 
         // Insert transaction
         const { data: transaction, error: insertError } = await supabase
             .from('transactions')
             .insert([{
-                user_id: userId,
+                user_id: userIdInt,
                 ticker: ticker.toUpperCase(),
                 asset_name: asset_name || ticker,
                 asset_type: asset_type || 'ACAO',
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
         if (insertError) {
             console.error('Insert error:', insertError);
             return NextResponse.json(
-                { detail: 'Erro ao adicionar transação' },
+                { detail: `Erro ao adicionar transação: ${insertError.message}` },
                 { status: 500 }
             );
         }
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
         const { data: existingPosition } = await supabase
             .from('asset_positions')
             .select('*')
-            .eq('user_id', userId)
+            .eq('user_id', userIdInt)
             .eq('ticker', ticker.toUpperCase())
             .single();
 
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
             await supabase
                 .from('asset_positions')
                 .insert([{
-                    user_id: userId,
+                    user_id: userIdInt,
                     ticker: ticker.toUpperCase(),
                     asset_name: asset_name || ticker,
                     asset_type: asset_type || 'ACAO',
