@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
                 notes,
                 transaction_date: transaction_date || new Date().toISOString().split('T')[0],
                 date: (transaction_date || new Date().toISOString().split('T')[0]) + 'T12:00:00Z', // Preencher coluna legada 'date' (timestamp)
+                created_at: new Date().toISOString() // Preencher coluna created_at explicitamente
             }])
             .select()
             .single();
