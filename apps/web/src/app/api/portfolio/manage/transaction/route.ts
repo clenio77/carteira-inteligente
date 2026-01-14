@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
                 fees: fees || 0,
                 broker,
                 notes,
-                transaction_date: transaction_date || new Date().toISOString().split('T')[0]
+                transaction_date: transaction_date || new Date().toISOString().split('T')[0],
+                date: (transaction_date || new Date().toISOString().split('T')[0]) + 'T12:00:00Z', // Preencher coluna legada 'date' (timestamp)
             }])
             .select()
             .single();
