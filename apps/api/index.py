@@ -67,13 +67,25 @@ app.add_middleware(
 # This is added AFTER CORS so it runs BEFORE CORS in the middleware stack
 @app.middleware("http")
 async def strip_api_prefix(request, call_next):
-    path = request.scope.get("path", "")
-    if path.startswith("/api"):
+    original_path = request.scope.get("path", "")
+    
+    # Log for debugging
+    print(f"[DEBUG] Original path: {original_path}")
+    print(f"[DEBUG] Method: {request.method}")
+    
+    if original_path.startswith("/api"):
         # Strip /api prefix
-        new_path = path[4:] if len(path) > 4 else "/"
+        new_path = original_path[4:] if len(original_path) > 4 else "/"
         request.scope["path"] = new_path
+        print(f"[DEBUG] Stripped path: {new_path}")
+    
     response = await call_next(request)
     return response
+
+# Debug endpoint to test path routing
+@app.get("/debug")
+async def debug_endpoint():
+    return {"status": "ok", "message": "Debug endpoint is working"}
 
 # Setup monitoring middleware
 setup_monitoring_middleware(app)

@@ -1,0 +1,39 @@
+[project]
+name = "carteira-inteligente-api"
+version = "1.0.0"
+description = "API para consolidação e análise de carteiras de investimentos"
+readme = "README.md"
+requires-python = ">=3.11"
+
+[project.scripts]
+app = "api.index:app"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | env
+  | build
+  | dist
+  | node_modules
+  | apps/api/alembic/versions
+)/
+'''
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
