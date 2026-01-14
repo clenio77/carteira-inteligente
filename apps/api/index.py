@@ -52,25 +52,28 @@ app = FastAPI(
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
     lifespan=lifespan,
-    root_path="/api",
 )
 
-# Middleware to strip /api prefix if present (Vercel workaround)
-@app.middleware("http")
-async def strip_api_prefix(request, call_next):
-    if request.url.path.startswith("/api"):
-        request.scope["path"] = request.url.path[4:]
-    response = await call_next(request)
-    return response
-
-# Configure CORS
+# Configure CORS - MUST be added before custom middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
+    allow_origins=["*"],  # Allow all origins in Vercel
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware to strip /api prefix if present (Vercel workaround)
+# This is added AFTER CORS so it runs BEFORE CORS in the middleware stack
+@app.middleware("http")
+async def strip_api_prefix(request, call_next):
+    path = request.scope.get("path", "")
+    if path.startswith("/api"):
+        # Strip /api prefix
+        new_path = path[4:] if len(path) > 4 else "/"
+        request.scope["path"] = new_path
+    response = await call_next(request)
+    return response
 
 # Setup monitoring middleware
 setup_monitoring_middleware(app)
