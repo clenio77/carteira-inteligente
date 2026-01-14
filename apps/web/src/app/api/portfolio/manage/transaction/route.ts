@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
                 asset_name: asset_name || ticker,
                 asset_type: asset_type || 'ACAO',
                 transaction_type,
+                type: transaction_type, // Preencher coluna legada 'type' para evitar erro NOT NULL
                 quantity,
                 price,
                 total_amount: totalAmount,
