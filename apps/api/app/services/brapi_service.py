@@ -120,6 +120,16 @@ class BrapiService:
         "WEGE3": {"symbol": "WEGE3", "shortName": "WEG ON", "regularMarketPrice": 52.40, "regularMarketChangePercent": 0.1, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 10000000},
         "MGLU3": {"symbol": "MGLU3", "shortName": "MAGALU ON", "regularMarketPrice": 12.30, "regularMarketChangePercent": -2.1, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 60000000},
         "MXRF11": {"symbol": "MXRF11", "shortName": "MAXI RENDA", "regularMarketPrice": 10.50, "regularMarketChangePercent": 0.1, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 800000},
+        "HGLG11": {"symbol": "HGLG11", "shortName": "CSHG LOGISTICA", "regularMarketPrice": 160.50, "regularMarketChangePercent": 0.5, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 500000},
+        "KNRI11": {"symbol": "KNRI11", "shortName": "KINEA RENDA", "regularMarketPrice": 158.20, "regularMarketChangePercent": -0.2, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 400000},
+        "XPML11": {"symbol": "XPML11", "shortName": "XP MALLS", "regularMarketPrice": 109.70, "regularMarketChangePercent": 0.1, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 300000},
+        "BTLG11": {"symbol": "BTLG11", "shortName": "BTG LOGISTICA", "regularMarketPrice": 103.20, "regularMarketChangePercent": 0.0, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 250000},
+        "VGIA11": {"symbol": "VGIA11", "shortName": "VALORA CRA", "regularMarketPrice": 9.30, "regularMarketChangePercent": 0.0, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 1000000},
+        "MXRF11": {"symbol": "MXRF11", "shortName": "MAXI RENDA", "regularMarketPrice": 9.97, "regularMarketChangePercent": 0.1, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 800000},
+        "CPTR11": {"symbol": "CPTR11", "shortName": "CAPITANIA AGRO", "regularMarketPrice": 9.70, "regularMarketChangePercent": 0.0, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 100000},
+        "ARRI11": {"symbol": "ARRI11", "shortName": "ATRIO", "regularMarketPrice": 9.50, "regularMarketChangePercent": 0.0, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 50000},
+        "CMIG3": {"symbol": "CMIG3", "shortName": "CEMIG ON", "regularMarketPrice": 11.55, "regularMarketChangePercent": 0.5, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 500000},
+        "BTHF11": {"symbol": "BTHF11", "shortName": "BTG HEDGE", "regularMarketPrice": 12.50, "regularMarketChangePercent": 0.1, "logourl": "https://brapi.dev/favicon.svg", "regularMarketVolume": 100000},
     }
 
     @staticmethod
@@ -355,6 +365,16 @@ class BrapiService:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    def _determine_asset_type(ticker: str) -> str:
+        """Determine if asset is stock or fund based on ticker"""
+        ticker = ticker.upper()
+        if ticker.endswith("11"):
+             if ticker.startswith("BPAC") or ticker in ["TIET11", "KLBN11", "SANB11", "ALUP11", "TAEE11", "SAPR11"]:
+                 return "stock"
+             return "fund"
+        return "stock"
+
+    @staticmethod
     async def get_market_highlights(limit: int = 10) -> Dict[str, Any]:
         """
         Get market highlights based on a curated list of major assets.
@@ -408,12 +428,7 @@ class BrapiService:
                     normalized_data = []
                     for q in results:
                         ticker = q.get("symbol")
-                        asset_type = "fund" if ticker.endswith("11") and not ticker.startswith("BPAC") else "stock" # Simple heuristic
-                        # BPAC11 is a Unit (Stock), not Fund. But 11 usually implies Fund. 
-                        # Refined heuristic: Check 'shortName' or just rely on manual buckets if needed.
-                        # For now, let's keep it simple or check explicit lists.
-                        if ticker in ["BPAC11", "TIET11", "KLBN11", "SANB11", "ALUP11", "TAEE11", "SAPR11"]:
-                            asset_type = "stock"
+                        asset_type = BrapiService._determine_asset_type(ticker)
 
                         normalized_data.append({
                             "stock": ticker,
@@ -462,7 +477,7 @@ class BrapiService:
                              "volume": item["regularMarketVolume"],
                              "market_cap": 0, # Mock does not have this, usage is safe
                              "logo": item["logourl"],
-                             "type": "stock" # Simplified
+                             "type": BrapiService._determine_asset_type(item["symbol"])
                          })
                          
                      return {"success": True, "data": normalized_fallback}
@@ -486,7 +501,7 @@ class BrapiService:
                         "volume": item["regularMarketVolume"],
                         "market_cap": 0,
                         "logo": item["logourl"],
-                        "type": "stock"
+                        "type": BrapiService._determine_asset_type(item["symbol"])
                     })
              return {"success": True, "data": normalized_fallback}
 

@@ -697,51 +697,60 @@ async def update_portfolio_prices(
     # Get unique tickers (remove duplicates)
     unique_tickers = list(set(tickers))
     
-    # Fetch prices sequentially (1 by 1) to respect free tier limits and avoid 429 errors
-    for i, ticker in enumerate(unique_tickers):
-        try:
-            # Add delay between requests to avoid rate limits
-            if i > 0:
-                await asyncio.sleep(0.5)  # 500ms delay between requests
+    # Batch fetch prices using get_quotes (which handles batching, caching, and fallbacks)
+    try:
+        # This single call replaces the slow sequential loop
+        result = await BrapiService.get_quotes(unique_tickers)
+        
+        if result["success"]:
+            quotes_data = {q["ticker"]: q for q in result["data"]}
             
-            # Fetch single quote
-            result = await BrapiService.get_quote(ticker)
-            
-            if result["success"]:
-                data = result["data"]
-                price = data.get("price")
-                
-                if price is not None:
-                    # Update all positions for this ticker
-                    if ticker in ticker_to_positions:
-                        for position in ticker_to_positions[ticker]:
-                            old_price = position.current_price
-                            position.current_price = price
-                            position.last_updated = datetime.utcnow()
-                            
-                            updated_assets.append({
-                                "ticker": ticker,
-                                "old_price": old_price,
-                                "new_price": price,
-                                "change": data.get("change_percent"),
-                            })
+            for ticker in unique_tickers:
+                if ticker in quotes_data:
+                    data = quotes_data[ticker]
+                    price = data.get("price")
+                    
+                    if price is not None:
+                        # Update all positions for this ticker
+                        if ticker in ticker_to_positions:
+                            for position in ticker_to_positions[ticker]:
+                                old_price = position.current_price
+                                position.current_price = price
+                                position.last_updated = datetime.utcnow()
+                                
+                                updated_assets.append({
+                                    "ticker": ticker,
+                                    "old_price": old_price,
+                                    "new_price": price,
+                                    "change": data.get("change_percent"),
+                                })
+                    else:
+                        failed_assets.append({
+                            "ticker": ticker,
+                            "error": "Price is null",
+                        })
                 else:
                     failed_assets.append({
                         "ticker": ticker,
-                        "error": "Price is null",
+                        "error": "Not found in batch response",
                     })
-            else:
+        else:
+            # If the entire batch failed (unlikely with fallback)
+            for ticker in unique_tickers:
                 failed_assets.append({
                     "ticker": ticker,
                     "error": result.get("error", "Unknown error"),
                 })
                 
-        except Exception as e:
-            logger.error(f"Error updating price for {ticker}: {str(e)}")
-            failed_assets.append({
-                "ticker": ticker,
-                "error": str(e),
-            })
+    except Exception as e:
+        logger.error(f"Error updating portfolio prices: {str(e)}")
+        # Mark all as failed if global exception
+        for ticker in unique_tickers:
+             if not any(f["ticker"] == ticker for f in updated_assets):
+                failed_assets.append({
+                    "ticker": ticker,
+                    "error": str(e),
+                })
     
     # Commit all changes
     db.commit()

@@ -97,7 +97,12 @@ export function MarketTicker({
         );
     }
 
-    if (error || (!isSpecific && !highlightsQuery.data?.success && !specificQuery.data?.success)) {
+    if (error || (!isLoading && !isSpecific && !highlightsQuery.data?.success && !specificQuery.data?.success)) {
+        console.error("Market Ticker Error:", error || "No data success", {
+            specific: isSpecific,
+            highlightSuccess: highlightsQuery.data?.success,
+            specificSuccess: specificQuery.data?.success
+        });
         return (
             <div className="flex items-center justify-center p-4 text-sm text-red-600">
                 <span>Indisponível</span>
