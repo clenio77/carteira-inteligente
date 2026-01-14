@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 Se alguma informação não estiver clara ou não for encontrada, use null.
 Retorne APENAS o JSON, sem explicações adicionais.`;
 
-        // Call Gemini with the image
+
         const result = await model.generateContent([
             prompt,
             {
@@ -84,15 +84,36 @@ Retorne APENAS o JSON, sem explicações adicionais.`;
         const response = result.response;
         const text = response.text();
 
+        console.log('Gemini raw response:', text); // Debug log
+
         // Try to parse JSON from response
         try {
-            // Extract JSON from markdown code blocks if present
-            let jsonStr = text;
-            const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/);
+            // Helper to clean and find JSON
+            let jsonStr = text.trim();
+
+            // 1. Try extracting from markdown blocks
+            const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
             if (jsonMatch) {
-                jsonStr = jsonMatch[1];
+                jsonStr = jsonMatch[1].trim();
+            } else {
+                // 2. Try extracting from code blocks without language
+                const codeMatch = text.match(/```\s*([\s\S]*?)\s*```/);
+                if (codeMatch) {
+                    jsonStr = codeMatch[1].trim();
+                } else {
+                    // 3. Try finding first { and last }
+                    const firstBrace = text.indexOf('{');
+                    const lastBrace = text.lastIndexOf('}');
+                    if (firstBrace !== -1 && lastBrace !== -1) {
+                        jsonStr = text.substring(firstBrace, lastBrace + 1);
+                    }
+                }
             }
 
+            // Remove comments if any (simple regex for //)
+            jsonStr = jsonStr.replace(/\/\/.*$/gm, '');
+
+            console.log('Cleaned JSON string:', jsonStr); // Debug log
             const parsedData = JSON.parse(jsonStr);
 
             return NextResponse.json({
@@ -100,12 +121,13 @@ Retorne APENAS o JSON, sem explicações adicionais.`;
                 ...parsedData
             });
         } catch (parseError) {
-            // If JSON parsing fails, return raw text
             console.error('Failed to parse Gemini response:', parseError);
+            console.error('Raw text was:', text);
+
             return NextResponse.json({
                 success: false,
                 raw_response: text,
-                detail: 'Não foi possível interpretar a nota. Tente uma imagem mais clara.'
+                detail: 'Não foi possível interpretar a estrutura do JSON. Veja o log do servidor.'
             }, { status: 422 });
         }
     } catch (error: any) {
