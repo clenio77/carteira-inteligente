@@ -29,7 +29,7 @@ router = APIRouter(prefix="/portfolio/manage", tags=["Portfolio Management"])
 # Request/Response Models
 class AddTransactionRequest(BaseModel):
     """Request to add a new transaction"""
-    ticker: str = Field(..., min_length=4, max_length=10, description="Stock ticker (e.g., PETR4)")
+    ticker: str = Field(..., min_length=3, max_length=60, description="Stock ticker (e.g., PETR4) or Fixed Income Name")
     asset_name: Optional[str] = Field(None, description="Asset name (optional, will be fetched if not provided)")
     asset_type: str = Field("ACAO", description="Asset type: ACAO, FII, ETF, BDR")
     transaction_type: str = Field(..., description="Transaction type: COMPRA or VENDA")
