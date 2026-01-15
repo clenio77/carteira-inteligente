@@ -140,7 +140,7 @@ class BrapiService:
     ) -> Dict[str, Any]:
         """
         Get current quotes for multiple stocks.
-        Handles batching AND Caching to avoid API limits.
+        Priority: Yahoo Finance -> Brapi -> Cache/Fallback
         """
         import time
         
@@ -148,6 +148,32 @@ class BrapiService:
         tickers_key = ",".join(sorted(tickers))
         CACHE_KEY = f"quotes_{tickers_key}"
         CACHE_DURATION = 1800  # 30 minutes cache to save API calls
+        
+        now = datetime.utcnow().timestamp()
+        
+        # 1. Check Cache (only if valid)
+        if CACHE_KEY in BrapiService._cache:
+             expiry = BrapiService._cache_expiry.get(CACHE_KEY, 0)
+             if now < expiry:
+                 # logger.info("Returning cached batch quotes (valid)")
+                 return BrapiService._cache[CACHE_KEY]
+        
+        # 2. Try Yahoo Finance (Free, High Limits)
+        # We prefer Yahoo to avoid Brapi 429 errors
+        try:
+             if not fundamental and not dividends:
+                 from app.services.yahoo_service import YahooService
+                 yahoo_result = await YahooService.get_quotes(tickers)
+                 
+                 if yahoo_result["success"]:
+                     final_result = yahoo_result
+                     # Cache it
+                     BrapiService._cache[CACHE_KEY] = final_result
+                     BrapiService._cache_expiry[CACHE_KEY] = now + CACHE_DURATION
+                     logger.info(f"Fetched {len(tickers)} quotes from Yahoo Finance")
+                     return final_result
+        except Exception as e:
+             logger.warning(f"YahooService failed, falling back to Brapi: {e}")
         
         now = time.time()
         # Check Cache first
