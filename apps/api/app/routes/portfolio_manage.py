@@ -646,15 +646,15 @@ class PriceUpdateResponse(BaseModel):
     failed_assets: List[dict]
 
 
-@router.post("/update-prices", response_model=PriceUpdateResponse)
+@router.post("/update_prices", response_model=PriceUpdateResponse)
 async def update_portfolio_prices(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    Update current prices for all assets in user's portfolio using BRAPI.
+    Update current prices for all assets in user's portfolio using BRAPI/Yahoo.
     
-    This endpoint fetches real-time prices from brapi.dev and updates
+    This endpoint fetches real-time prices and updates
     the current_price field for all positions.
     """
     from app.services.brapi_service import BrapiService
