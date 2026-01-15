@@ -57,30 +57,12 @@ app = FastAPI(
 # Configure CORS - MUST be added before custom middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in Vercel
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when allow_origins is "*"
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
-
-# Middleware to strip /api prefix if present (Vercel workaround)
-# This is added AFTER CORS so it runs BEFORE CORS in the middleware stack
-@app.middleware("http")
-async def strip_api_prefix(request, call_next):
-    original_path = request.scope.get("path", "")
-    
-    # Log for debugging
-    print(f"[DEBUG] Original path: {original_path}")
-    print(f"[DEBUG] Method: {request.method}")
-    
-    if original_path.startswith("/api"):
-        # Strip /api prefix
-        new_path = original_path[4:] if len(original_path) > 4 else "/"
-        request.scope["path"] = new_path
-        print(f"[DEBUG] Stripped path: {new_path}")
-    
-    response = await call_next(request)
-    return response
 
 # Debug endpoint to test path routing
 @app.get("/debug")
