@@ -1,3 +1,9 @@
+[project]
+name = "carteira-inteligente-api"
+version = "1.0.0"
+description = "API for Carteira Inteligente"
+requires-python = ">=3.9"
+
 [tool.black]
 line-length = 100
 target-version = ['py311']
