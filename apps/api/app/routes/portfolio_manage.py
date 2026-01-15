@@ -646,16 +646,14 @@ class PriceUpdateResponse(BaseModel):
     failed_assets: List[dict]
 
 
-@router.post("/update_prices", response_model=PriceUpdateResponse)
-async def update_portfolio_prices(
+@router.get("/sync_prices", response_model=PriceUpdateResponse)
+async def sync_portfolio_prices(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    Update current prices for all assets in user's portfolio using BRAPI/Yahoo.
-    
-    This endpoint fetches real-time prices and updates
-    the current_price field for all positions.
+    Update current prices (Sync) for all assets in user's portfolio.
+    Changed to GET to avoid 405 Method Not Allowed issues on some proxies.
     """
     from app.services.brapi_service import BrapiService
     

@@ -55,8 +55,8 @@ export default function AssetsPage() {
   // Mutation for updating prices
   const updatePricesMutation = useMutation({
     mutationFn: async () => {
-      // Send empty object to ensure Content-Length header is set correctly
-      const response = await api.post<PriceUpdateResponse>('/portfolio/manage/update_prices', {});
+      // Use GET to avoid 405 issues. Syncing is technically a state change but safe via GET here.
+      const response = await api.get<PriceUpdateResponse>('/portfolio/manage/sync_prices');
       return response.data;
     },
     onSuccess: (data) => {

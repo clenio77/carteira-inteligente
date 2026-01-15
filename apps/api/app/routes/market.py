@@ -152,8 +152,7 @@ async def get_historical_data(
     interval: str = Query(
         "1d",
         description="Data interval: 1d, 1wk, 1mo"
-    ),
-    current_user: User = Depends(get_current_user)
+    )
 ):
     """
     Get historical price data for a stock.
@@ -240,8 +239,7 @@ async def search_stocks(
 
 @router.get("/highlights", response_model=SearchResponse)
 async def get_market_highlights(
-    limit: int = Query(10, le=100),
-    current_user: User = Depends(get_current_user)
+    limit: int = Query(10, le=100)
 ):
     """
     Get dynamic market market highlights (top volume).
