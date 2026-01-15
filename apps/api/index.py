@@ -85,7 +85,7 @@ async def strip_api_prefix(request, call_next):
 # Debug endpoint to test path routing
 @app.get("/debug")
 async def debug_endpoint():
-    return {"status": "ok", "message": "Debug endpoint is working"}
+    return {"status": "ok", "message": "Debug endpoint is working", "version": "2026-01-15-v3"}
 
 # Setup monitoring middleware
 setup_monitoring_middleware(app)
