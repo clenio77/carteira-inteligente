@@ -1,23 +1,15 @@
 {
+    "$schema": "https://openapi.vercel.sh/vercel.json",
     "version": 2,
-    "builds": [
+    "rewrites": [
         {
-            "src": "apps/web/package.json",
-            "use": "@vercel/next"
-        },
-        {
-            "src": "api/index.py",
-            "use": "@vercel/python"
+            "source": "/api/:path*",
+            "destination": "/apps/api/index.py"
         }
     ],
-    "routes": [
-        {
-            "src": "/api/(.*)",
-            "dest": "/api/index.py"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/apps/web/$1"
+    "functions": {
+        "apps/api/index.py": {
+            "maxDuration": 30
         }
-    ]
+    }
 }
