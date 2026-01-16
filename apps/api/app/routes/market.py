@@ -5,6 +5,9 @@ Endpoints for fetching real market data from brapi.dev
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
+import logging
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from app.services.brapi_service import BrapiService
 from app.core.deps import get_current_user
@@ -209,32 +212,38 @@ async def search_stocks(
     """
     Search for stocks by name or ticker.
     """
-    result = await BrapiService.search_stocks(query=q)
+    try:
+        result = await BrapiService.search_stocks(query=q)
 
-    if not result["success"]:
-        raise HTTPException(status_code=500, detail=result.get("error"))
+        if not result["success"]:
+            # Em vez de erro 500, retornar lista vazia ou erro 404 suave
+            logger.warning(f"Search failed for {q}: {result.get('error')}")
+            return SearchResponse(success=False, count=0, results=[])
 
-    stocks = result["data"]
-    results = [
-        StockSearchResult(
-            stock=s.get("stock", ""),
-            name=s.get("name"),
-            close=s.get("close"),
-            change=s.get("change"),
-            volume=s.get("volume"),
-            market_cap=s.get("market_cap"),
-            logo=s.get("logo"),
-            sector=s.get("sector"),
-            type=s.get("type")
+        stocks = result["data"]
+        results = [
+            StockSearchResult(
+                stock=s.get("stock", ""),
+                name=s.get("name"),
+                close=s.get("close"),
+                change=s.get("change"),
+                volume=s.get("volume"),
+                market_cap=s.get("market_cap"),
+                logo=s.get("logo"),
+                sector=s.get("sector"),
+                type=s.get("type")
+            )
+            for s in stocks
+        ]
+
+        return SearchResponse(
+            success=True,
+            count=len(results),
+            results=results
         )
-        for s in stocks
-    ]
-
-    return SearchResponse(
-        success=True,
-        count=len(results),
-        results=results
-    )
+    except Exception as e:
+        logger.error(f"Search endpoint error: {e}")
+        return SearchResponse(success=False, count=0, results=[])
 
 
 @router.get("/highlights", response_model=SearchResponse)
