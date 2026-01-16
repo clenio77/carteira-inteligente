@@ -489,3 +489,19 @@ async def analyze_portfolio_risk(
     
     result = await MarketIntelligence.analyze_portfolio_risk(ticker_list)
     return result
+
+
+@router.get("/intelligence/full/{ticker}")
+async def get_full_analysis(ticker: str):
+    """
+    Análise completa de um ativo com IA.
+    
+    Retorna:
+    - Dados de volatilidade (score, nível, tendência)
+    - Anomalias detectadas
+    - Insight gerado por IA (Google Gemini) explicando o contexto
+    
+    Ideal para tela de detalhes de um ativo.
+    """
+    result = await MarketIntelligence.get_full_analysis(ticker)
+    return result

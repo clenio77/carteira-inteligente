@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/market";
@@ -13,8 +13,9 @@ import {
     Loader2,
     BarChart3,
     Flame,
-    Snowflake,
+    Sparkles,
 } from "lucide-react";
+import { AssetAnalysisModal } from "./asset-analysis-modal";
 
 interface VolatilityData {
     ticker: string;
@@ -60,6 +61,7 @@ interface MarketIntelligenceProps {
 
 export function MarketIntelligence({ portfolioTickers = [] }: MarketIntelligenceProps) {
     const tickersParam = portfolioTickers.join(",");
+    const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
 
     const { data: riskData, isLoading, error } = useQuery<PortfolioRisk>({
         queryKey: ["portfolioRisk", tickersParam],
@@ -131,8 +133,8 @@ export function MarketIntelligence({ portfolioTickers = [] }: MarketIntelligence
                 <div className="space-y-4">
                     {/* Risk Summary */}
                     <div className={`p-4 rounded-lg ${riskData.risk_level === "baixo" ? "bg-green-50 border border-green-200" :
-                            riskData.risk_level === "moderado" ? "bg-yellow-50 border border-yellow-200" :
-                                "bg-red-50 border border-red-200"
+                        riskData.risk_level === "moderado" ? "bg-yellow-50 border border-yellow-200" :
+                            "bg-red-50 border border-red-200"
                         }`}>
                         <div className="flex items-center gap-3">
                             {getRiskIcon(riskData.risk_level)}
@@ -192,12 +194,19 @@ export function MarketIntelligence({ portfolioTickers = [] }: MarketIntelligence
                     {/* Top Volatile Assets */}
                     {riskData.volatility_details && riskData.volatility_details.length > 0 && (
                         <div>
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 Volatilidade por Ativo
+                                <span className="text-xs font-normal text-gray-400 flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3" /> Clique para análise IA
+                                </span>
                             </h4>
                             <div className="space-y-2">
                                 {riskData.volatility_details.slice(0, 5).map((asset) => (
-                                    <div key={asset.ticker} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                    <button
+                                        key={asset.ticker}
+                                        onClick={() => setSelectedTicker(asset.ticker)}
+                                        className="w-full flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                                    >
                                         <div className="flex items-center gap-2">
                                             <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${getScoreColor(asset.score)}`}>
                                                 {asset.score}
@@ -216,12 +225,20 @@ export function MarketIntelligence({ portfolioTickers = [] }: MarketIntelligence
                                                 <Activity className="w-4 h-4 text-gray-400" />
                                             )}
                                         </div>
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* AI Analysis Modal */}
+            {selectedTicker && (
+                <AssetAnalysisModal
+                    ticker={selectedTicker}
+                    onClose={() => setSelectedTicker(null)}
+                />
             )}
         </div>
     );

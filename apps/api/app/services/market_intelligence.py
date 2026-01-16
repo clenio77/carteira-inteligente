@@ -406,3 +406,95 @@ class MarketIntelligence:
             trend="indefinida",
             recommendation="❌ Dados insuficientes para análise"
         )
+    
+    @staticmethod
+    async def get_ai_insight(ticker: str, volatility_data: Dict[str, Any], anomalies: List[Dict] = None) -> str:
+        """
+        Usa Google Gemini para gerar insights inteligentes sobre a volatilidade.
+        
+        Analisa os dados quantitativos e gera um contexto em linguagem natural
+        explicando POR QUE o ativo está se comportando dessa forma.
+        """
+        import google.generativeai as genai
+        from app.core.config import settings
+        
+        if not settings.GOOGLE_API_KEY:
+            return "💡 Configure GOOGLE_API_KEY para insights de IA"
+        
+        try:
+            genai.configure(api_key=settings.GOOGLE_API_KEY)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            
+            # Construir prompt com dados
+            anomaly_text = ""
+            if anomalies:
+                anomaly_text = f"\nAnomalias detectadas: {', '.join(a.get('message', '') for a in anomalies[:3])}"
+            
+            prompt = f"""Você é um analista de mercado brasileiro especializado em B3.
+Analise os seguintes dados de {ticker} e forneça um insight CURTO (máximo 2-3 frases) sobre o comportamento do ativo.
+
+DADOS:
+- Ticker: {volatility_data.get('ticker', ticker)}
+- Preço atual: R$ {volatility_data.get('current_price', 'N/A')}
+- Volatilidade diária: {volatility_data.get('volatility_daily', 0):.2f}%
+- Nível: {volatility_data.get('volatility_level', 'N/A')}
+- Max Drawdown (30d): {volatility_data.get('max_drawdown_30d', 0):.1f}%
+- Tendência: {volatility_data.get('trend', 'N/A')}{anomaly_text}
+
+REGRAS:
+1. Seja BREVE (2-3 frases no máximo)
+2. Foque no contexto do setor se souber (ex: Petrobras = petróleo, bancos = juros)
+3. NÃO dê recomendação de compra/venda
+4. NÃO mencione preços-alvo
+5. Use linguagem acessível para investidor pessoa física
+6. Comece com um emoji relevante
+
+RESPOSTA:"""
+            
+            response = model.generate_content(prompt)
+            
+            if response and response.text:
+                # Limpar resposta
+                insight = response.text.strip()
+                # Limitar tamanho
+                if len(insight) > 300:
+                    insight = insight[:297] + "..."
+                return insight
+            
+            return "💡 Não foi possível gerar insight para este ativo"
+            
+        except Exception as e:
+            logger.error(f"Error generating AI insight for {ticker}: {e}")
+            return f"💡 Análise automática indisponível no momento"
+    
+    @staticmethod
+    async def get_full_analysis(ticker: str) -> Dict[str, Any]:
+        """
+        Retorna análise completa de um ativo com:
+        - Dados quantitativos (volatilidade, anomalias)
+        - Insight de IA (Gemini)
+        """
+        from dataclasses import asdict
+        
+        # Buscar dados quantitativos
+        volatility = await MarketIntelligence.calculate_volatility(ticker)
+        anomalies = await MarketIntelligence.detect_anomalies(ticker)
+        
+        volatility_dict = asdict(volatility)
+        anomalies_list = [asdict(a) for a in anomalies]
+        
+        # Gerar insight com IA
+        ai_insight = await MarketIntelligence.get_ai_insight(
+            ticker, 
+            volatility_dict, 
+            anomalies_list
+        )
+        
+        return {
+            "ticker": ticker.upper(),
+            "volatility": volatility_dict,
+            "anomalies": anomalies_list,
+            "ai_insight": ai_insight,
+            "analyzed_at": datetime.now().isoformat()
+        }
+
