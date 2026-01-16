@@ -6,7 +6,7 @@ com estratégia de fallback (BrAPI -> YFinance).
 import logging
 import httpx
 # import yfinance as yf ## LAZY LOAD
-import pandas as pd
+# import pandas as pd
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from app.core.config import settings
