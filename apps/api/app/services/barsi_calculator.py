@@ -63,9 +63,12 @@ class BarsiCalculator:
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 # Buscar dados com dividendos e fundamentalistas
+                # range=5y é necessário para buscar histórico de dividendos
                 params = {
                     "fundamental": "true",
-                    "dividends": "true"
+                    "dividends": "true",
+                    "range": "5y",  # Buscar 5 anos de histórico
+                    "interval": "1mo"  # Intervalo mensal
                 }
                 if settings.BRAPI_TOKEN:
                     params["token"] = settings.BRAPI_TOKEN
@@ -87,16 +90,60 @@ class BarsiCalculator:
                 
                 quote = results[0]
                 
+                # Log para debug
+                logger.info(f"BrAPI response keys for {ticker}: {quote.keys()}")
+                
                 # Extrair dados
                 current_price = quote.get("regularMarketPrice", 0)
+                
+                # BrAPI pode retornar dividendos em diferentes estruturas
+                # Tentar múltiplos formatos
+                cash_dividends = []
+                
+                # Formato 1: dividendsData.cashDividends
                 dividends_data = quote.get("dividendsData", {})
-                cash_dividends = dividends_data.get("cashDividends", [])
+                if dividends_data:
+                    cash_dividends = dividends_data.get("cashDividends", [])
+                    logger.info(f"{ticker}: Found {len(cash_dividends)} dividends in dividendsData.cashDividends")
+                
+                # Formato 2: cashDividends diretamente
+                if not cash_dividends:
+                    cash_dividends = quote.get("cashDividends", [])
+                    logger.info(f"{ticker}: Found {len(cash_dividends)} dividends in cashDividends")
+                
+                # Formato 3: historicalDataPrice pode ter dividendos
+                if not cash_dividends:
+                    historical = quote.get("historicalDataPrice", [])
+                    if historical:
+                        logger.info(f"{ticker}: Checking historicalDataPrice for dividends")
+                
+                # Formato 4: summaryProfile.dividendRate (yield atual)
+                summary = quote.get("summaryProfile", {}) or quote.get("defaultKeyStatistics", {})
+                dividend_rate = quote.get("dividendRate", 0) or summary.get("dividendRate", 0)
+                dividend_yield = quote.get("dividendYield", 0) or summary.get("dividendYield", 0)
+                
+                logger.info(f"{ticker}: dividendRate={dividend_rate}, dividendYield={dividend_yield}")
                 
                 if not current_price:
                     return BarsiCalculator._create_error_response(ticker, "Cotação não disponível")
                 
                 # Calcular dividendos por ano
                 dividend_by_year = BarsiCalculator._group_dividends_by_year(cash_dividends)
+                
+                # Se não encontrou histórico mas tem dividendYield, estimar
+                if not dividend_by_year and dividend_rate and dividend_rate > 0:
+                    current_year = datetime.now().year
+                    # Estimar dividendo anual baseado no dividendRate
+                    dividend_by_year[current_year - 1] = dividend_rate
+                    logger.info(f"{ticker}: Using dividendRate as estimate: R${dividend_rate}")
+                
+                # Se não tem nada, tentar buscar do dividendYield
+                if not dividend_by_year and dividend_yield and dividend_yield > 0:
+                    # dividendYield é em %, converter para valor
+                    estimated_dividend = (dividend_yield / 100) * current_price
+                    current_year = datetime.now().year
+                    dividend_by_year[current_year - 1] = estimated_dividend
+                    logger.info(f"{ticker}: Estimated from dividendYield ({dividend_yield}%): R${estimated_dividend:.2f}")
                 
                 # Calcular média anual (últimos N anos)
                 avg_annual_dividend = BarsiCalculator._calculate_average_dividend(dividend_by_year)
