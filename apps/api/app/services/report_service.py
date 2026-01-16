@@ -84,21 +84,22 @@ class ReportService:
     
     @staticmethod
     async def _enrich_with_market_data(assets: List[Dict]) -> List[AssetSummary]:
-        """Enriquece os dados dos ativos com informações de mercado"""
+        """Enriquece os dados dos ativos com informações de mercado em paralelo"""
         from app.services.market_data import MarketDataService
+        import asyncio
         
         enriched = []
-        
-        for asset in assets:
+        tasks = []
+
+        # Função auxiliar para processar um único ativo
+        async def process_asset(asset):
             ticker = asset.get('ticker', '')
-            
-            # Buscar dados atuais
             try:
-                quote = await MarketDataService.get_quote(ticker)
+                # Timeout agressivo por ativo para não travar o todo
+                quote = await asyncio.wait_for(MarketDataService.get_quote(ticker), timeout=5.0)
                 
                 if quote:
                     current_price = quote.get("current_price") or asset.get('current_price', 0)
-                    
                     quantity = asset.get('quantity', 0)
                     average_price = asset.get('average_price', current_price)
                     total_invested = quantity * average_price
@@ -106,7 +107,7 @@ class ReportService:
                     profit_loss = current_value - total_invested
                     profit_loss_pct = (profit_loss / total_invested * 100) if total_invested > 0 else 0
                     
-                    enriched.append(AssetSummary(
+                    return AssetSummary(
                         ticker=ticker.upper(),
                         name=quote.get('name', ticker),
                         sector=asset.get('sector'),
@@ -120,30 +121,38 @@ class ReportService:
                         weight_pct=0,  # Calculado depois
                         price_earnings=quote.get('price_earnings'),
                         dividend_yield=quote.get('dividend_yield')
-                    ))
-                else:
-                    # Fallback com dados locais se API falhar totalmente
-                    logger.warning(f"Could not fetch market data for {ticker}")
-                    current_price = asset.get('current_price', 0)
-                    quantity = asset.get('quantity', 0)
-                    enriched.append(AssetSummary(
-                        ticker=ticker.upper(),
-                        name=ticker,
-                        sector=asset.get('sector'),
-                        quantity=quantity,
-                        average_price=asset.get('average_price', 0),
-                        current_price=current_price,
-                        total_invested=quantity * asset.get('average_price', 0),
-                        current_value=quantity * current_price,
-                        profit_loss=0,
-                        profit_loss_pct=0,
-                        weight_pct=0,
-                        price_earnings=None,
-                        dividend_yield=None
-                    ))
-
+                    )
             except Exception as e:
                 logger.warning(f"Failed to enrich {ticker}: {e}")
+            
+            # Fallback em caso de erro ou timeout
+            current_price = asset.get('current_price', 0)
+            quantity = asset.get('quantity', 0)
+            return AssetSummary(
+                ticker=ticker.upper(),
+                name=ticker,
+                sector=asset.get('sector'),
+                quantity=quantity,
+                average_price=asset.get('average_price', 0),
+                current_price=current_price,
+                total_invested=quantity * asset.get('average_price', 0),
+                current_value=quantity * current_price,
+                profit_loss=0,
+                profit_loss_pct=0,
+                weight_pct=0,
+                price_earnings=None,
+                dividend_yield=None
+            )
+
+        # Criar tarefas para todos os ativos
+        for asset in assets:
+            tasks.append(process_asset(asset))
+        
+        # Executar tudo junto
+        if tasks:
+            enriched = await asyncio.gather(*tasks)
+            # Filtrar possíveis Nones se algo muito estranho acontecer (embora o fallback previna)
+            enriched = [e for e in enriched if e]
         
         # Calcular pesos
         total_value = sum(a.current_value for a in enriched)

@@ -311,23 +311,33 @@ async def generate_portfolio_report(
             "report": None
         }
     
-    # Preparar dados dos ativos
-    portfolio_assets = []
-    for pos in positions:
-        portfolio_assets.append({
-            "ticker": pos.asset.ticker,
-            "quantity": pos.quantity,
-            "average_price": pos.average_price,
-            "current_price": pos.current_price or pos.average_price,
-            "sector": pos.asset.sector
-        })
-    
-    # Gerar relatório
-    report = await ReportService.generate_report(portfolio_assets)
-    
-    return {
-        "success": True,
-        "message": "Relatório gerado com sucesso",
-        "report": asdict(report)
-    }
+    try:
+        # Preparar dados dos ativos
+        portfolio_assets = []
+        for pos in positions:
+            portfolio_assets.append({
+                "ticker": pos.asset.ticker,
+                "quantity": pos.quantity,
+                "average_price": pos.average_price,
+                "current_price": pos.current_price or pos.average_price,
+                "sector": pos.asset.sector
+            })
+        
+        # Gerar relatório
+        report = await ReportService.generate_report(portfolio_assets)
+        
+        return {
+            "success": True,
+            "message": "Relatório gerado com sucesso",
+            "report": asdict(report)
+        }
+    except Exception as e:
+        import traceback
+        error_msg = f"Failed to generate report: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        return {
+            "success": False,
+            "message": f"Erro interno ao gerar relatório: {str(e)}",
+            "report": None
+        }
 
