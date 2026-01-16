@@ -881,3 +881,241 @@ async def get_prices_status(
         "needs_update": needs_update,
         "assets": assets_status,
     }
+
+
+# ================================
+# PROVENTOS (Dividends/JCP) Management
+# ================================
+
+from app.models.proceed import Proceed, ProceedType
+
+
+class AddProceedRequest(BaseModel):
+    """Request to add a new proceed (dividend/JCP)"""
+    ticker: str = Field(..., min_length=3, max_length=20, description="Asset ticker")
+    proceed_type: str = Field(..., description="Type: DIVIDEND, JCP, RENDIMENTO, BONIFICACAO, DIREITO")
+    proceed_date: date = Field(..., description="Payment date")
+    value_per_share: float = Field(..., gt=0, description="Value per share")
+    quantity: float = Field(..., gt=0, description="Number of shares that received payment")
+    description: Optional[str] = Field(None, description="Optional description")
+
+
+class ProceedResponse(BaseModel):
+    """Proceed response"""
+    id: int
+    ticker: str
+    asset_name: str
+    proceed_type: str
+    proceed_date: str
+    value_per_share: float
+    quantity: float
+    total_value: float
+    description: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+@router.post("/proceeds", response_model=Dict)
+async def add_proceed(
+    request: AddProceedRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Add a new proceed (dividend, JCP, etc.)
+    
+    Manually register income received from an asset.
+    """
+    # Find or create asset
+    asset = db.query(Asset).filter(Asset.ticker == request.ticker.upper()).first()
+    if not asset:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Asset {request.ticker} not found. Please add the asset first."
+        )
+    
+    # Validate proceed type
+    try:
+        proceed_type = ProceedType[request.proceed_type.upper()]
+    except KeyError:
+        valid_types = [t.name for t in ProceedType]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid proceed type. Valid types: {valid_types}"
+        )
+    
+    # Calculate total value
+    total_value = request.value_per_share * request.quantity
+    
+    # Create proceed
+    proceed = Proceed(
+        user_id=current_user.id,
+        asset_id=asset.id,
+        type=proceed_type,
+        date=request.proceed_date,
+        value_per_share=request.value_per_share,
+        quantity=request.quantity,
+        total_value=total_value,
+        description=request.description
+    )
+    
+    db.add(proceed)
+    db.commit()
+    db.refresh(proceed)
+    
+    logger.info(f"User {current_user.id} added proceed: {asset.ticker} - {proceed_type.value} - R${total_value:.2f}")
+    
+    return {
+        "success": True,
+        "message": f"Provento de {asset.ticker} cadastrado com sucesso",
+        "proceed": {
+            "id": proceed.id,
+            "ticker": asset.ticker,
+            "asset_name": asset.name or asset.ticker,
+            "proceed_type": proceed_type.value,
+            "proceed_date": request.proceed_date.isoformat(),
+            "value_per_share": request.value_per_share,
+            "quantity": request.quantity,
+            "total_value": total_value,
+        }
+    }
+
+
+@router.get("/proceeds")
+async def list_proceeds(
+    ticker: Optional[str] = None,
+    proceed_type: Optional[str] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    List user's proceeds with optional filters
+    """
+    query = db.query(Proceed).filter(Proceed.user_id == current_user.id)
+    
+    if ticker:
+        asset = db.query(Asset).filter(Asset.ticker == ticker.upper()).first()
+        if asset:
+            query = query.filter(Proceed.asset_id == asset.id)
+    
+    if proceed_type:
+        try:
+            pt = ProceedType[proceed_type.upper()]
+            query = query.filter(Proceed.type == pt)
+        except KeyError:
+            pass
+    
+    if start_date:
+        query = query.filter(Proceed.date >= start_date)
+    
+    if end_date:
+        query = query.filter(Proceed.date <= end_date)
+    
+    proceeds = query.order_by(Proceed.date.desc()).limit(limit).all()
+    
+    # Calculate totals
+    total_value = sum(p.total_value for p in proceeds)
+    
+    # Get totals by type
+    totals_by_type = {}
+    for p in proceeds:
+        type_name = p.type.value
+        totals_by_type[type_name] = totals_by_type.get(type_name, 0) + p.total_value
+    
+    # Format response
+    proceeds_list = []
+    for p in proceeds:
+        asset = db.query(Asset).filter(Asset.id == p.asset_id).first()
+        proceeds_list.append({
+            "id": p.id,
+            "ticker": asset.ticker if asset else "N/A",
+            "asset_name": asset.name if asset else "N/A",
+            "proceed_type": p.type.value,
+            "proceed_date": p.date.isoformat(),
+            "value_per_share": p.value_per_share,
+            "quantity": p.quantity,
+            "total_value": p.total_value,
+            "description": p.description,
+        })
+    
+    return {
+        "proceeds": proceeds_list,
+        "total_count": len(proceeds_list),
+        "total_value": round(total_value, 2),
+        "totals_by_type": {k: round(v, 2) for k, v in totals_by_type.items()},
+    }
+
+
+@router.delete("/proceeds/{proceed_id}")
+async def delete_proceed(
+    proceed_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete a proceed
+    """
+    proceed = db.query(Proceed).filter(
+        Proceed.id == proceed_id,
+        Proceed.user_id == current_user.id
+    ).first()
+    
+    if not proceed:
+        raise HTTPException(status_code=404, detail="Proceed not found")
+    
+    db.delete(proceed)
+    db.commit()
+    
+    return {"success": True, "message": "Provento excluído com sucesso"}
+
+
+@router.get("/proceeds/summary")
+async def get_proceeds_summary(
+    year: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get a summary of proceeds by month and asset
+    """
+    query = db.query(Proceed).filter(Proceed.user_id == current_user.id)
+    
+    if year:
+        from sqlalchemy import extract
+        query = query.filter(extract('year', Proceed.date) == year)
+    
+    proceeds = query.order_by(Proceed.date).all()
+    
+    # Group by month
+    months = {}
+    for p in proceeds:
+        month_key = p.date.strftime("%Y-%m")
+        if month_key not in months:
+            months[month_key] = {"total": 0, "count": 0}
+        months[month_key]["total"] += p.total_value
+        months[month_key]["count"] += 1
+    
+    # Group by asset
+    assets = {}
+    for p in proceeds:
+        asset = db.query(Asset).filter(Asset.id == p.asset_id).first()
+        ticker = asset.ticker if asset else "N/A"
+        if ticker not in assets:
+            assets[ticker] = {"total": 0, "count": 0}
+        assets[ticker]["total"] += p.total_value
+        assets[ticker]["count"] += 1
+    
+    # Sort by total
+    sorted_assets = sorted(assets.items(), key=lambda x: x[1]["total"], reverse=True)
+    
+    return {
+        "by_month": [{"month": k, "total": round(v["total"], 2), "count": v["count"]} for k, v in sorted(months.items())],
+        "by_asset": [{"ticker": k, "total": round(v["total"], 2), "count": v["count"]} for k, v in sorted_assets],
+        "total": round(sum(p.total_value for p in proceeds), 2),
+        "total_count": len(proceeds),
+    }
+
