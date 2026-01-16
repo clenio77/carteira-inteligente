@@ -36,3 +36,4 @@ mypy==1.9.0
 
 psutil
 google-generativeai==0.8.3
+yfinance==0.2.36
