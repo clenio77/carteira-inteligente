@@ -13,9 +13,9 @@
 - [ ] **Yield on Cost** (dividendo / preço médio Ativos)
 
 ## Fase 3: Comparação com Benchmarks (2 dias)
-- [ ] **3.1 Buscar dados do IBOV e CDI**
-- [ ] **3.2 Gráfico comparativo de rentabilidade**
-- [ ] **3.3 Performance relativa (vs benchmark)**
+- [x] **API de Benchmarks** (IBOV, CDI, SELIC) ✅
+- [x] **Componente de Comparação no Dashboard** ✅
+- [x] **Alpha vs IBOV** (carteira vs índice) ✅
 
 ## Fase 4: Relatórios (2-3 dias)
 - [x] **Exportar posições para CSV** ✅

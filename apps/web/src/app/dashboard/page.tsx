@@ -201,6 +201,12 @@ export default function DashboardPage() {
                   Proventos
                 </Button>
               </Link>
+              <Link href="/dashboard/barsi">
+                <Button variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50">
+                  <Calculator className="w-4 h-4 mr-2" />
+                  Preço Teto
+                </Button>
+              </Link>
               <NotificationsMenu />
             </div>
           </div>

@@ -370,3 +370,55 @@ async def compare_with_benchmark(
         "outperformed_ibov": comparison["outperformed"],
         "cdi_annual_rate": BenchmarkService.FALLBACK_DATA["CDI"]["annual_rate"]
     }
+
+
+# ================================
+# BARSI PRICE TARGET CALCULATOR
+# ================================
+
+from app.services.barsi_calculator import BarsiCalculator
+from dataclasses import asdict
+
+
+@router.get("/barsi/{ticker}")
+async def calculate_barsi_price_target(ticker: str):
+    """
+    Calcula o Preço Teto Barsi para uma ação.
+    
+    A fórmula Barsi:
+    - Preço Teto = Dividendo Médio Anual / 0.06 (6% yield mínimo)
+    
+    Retorna:
+    - Preço atual vs Preço Teto
+    - Histórico de dividendos
+    - Recomendação de compra/venda
+    - Margem de segurança
+    """
+    analysis = await BarsiCalculator.calculate_price_target(ticker)
+    return asdict(analysis)
+
+
+@router.get("/barsi/portfolio/analyze")
+async def analyze_portfolio_barsi(
+    tickers: str = Query(..., description="Comma-separated list of tickers (e.g., PETR4,BBAS3,ITSA4)")
+):
+    """
+    Analisa múltiplos ativos usando metodologia Barsi.
+    
+    Retorna lista ordenada por margem de segurança (melhores oportunidades primeiro).
+    """
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    
+    if not ticker_list:
+        raise HTTPException(status_code=400, detail="Nenhum ticker fornecido")
+    
+    if len(ticker_list) > 20:
+        raise HTTPException(status_code=400, detail="Máximo de 20 ativos por análise")
+    
+    analyses = await BarsiCalculator.analyze_portfolio(ticker_list)
+    
+    return {
+        "total_analyzed": len(analyses),
+        "opportunities": sum(1 for a in analyses if a.is_below_target),
+        "analyses": [asdict(a) for a in analyses]
+    }
