@@ -51,137 +51,96 @@ class BarsiCalculator:
     async def calculate_price_target(ticker: str) -> BarsiAnalysis:
         """
         Calcula o Preço Teto Barsi para uma ação.
-        
-        Args:
-            ticker: Código da ação (ex: PETR4, BBAS3)
-            
-        Returns:
-            BarsiAnalysis com todos os dados da análise
         """
-        from app.core.config import settings
-        
+        from app.services.market_data import MarketDataService
+
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                # Buscar dados com dividendos e fundamentalistas
-                # range=5y é necessário para buscar histórico de dividendos
-                params = {
-                    "fundamental": "true",
-                    "dividends": "true",
-                    "range": "5y",  # Buscar 5 anos de histórico
-                    "interval": "1mo"  # Intervalo mensal
-                }
-                if settings.BRAPI_TOKEN:
-                    params["token"] = settings.BRAPI_TOKEN
+            # Buscar dados de mercado
+            quote_data = await MarketDataService.get_quote(ticker)
+            if not quote_data or not quote_data.get("current_price"):
+                return BarsiCalculator._create_error_response(ticker, "Dados não encontrados")
+
+            current_price = quote_data.get("current_price", 0)
+            
+            # Buscar histórico de dividendos
+            dividends_data = await MarketDataService.get_dividends_history(ticker, years=5)
+            
+            # Processar dividendos
+            dividends_by_year = {}
+            if dividends_data:
+                dividends = []
+                for d in dividends_data:
+                    try:
+                        # Tenta parsear a data
+                        date_str = str(d["date"])
+                        if "T" in date_str:
+                             date_obj = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                        elif len(date_str) >= 10:
+                             date_obj = datetime.strptime(date_str[:10], "%Y-%m-%d")
+                        else:
+                             continue
+
+                        dividends.append({
+                            "paymentDate": date_obj.strftime("%Y-%m-%d"),
+                            "rate": float(d["value"]),
+                            "typeLabel": d.get("label", "Dividendo")
+                        })
+                    except Exception as e:
+                        logger.warning(f"Error parsing dividend for {ticker}: {e}")
+                        continue
                 
-                response = await client.get(
-                    f"https://brapi.dev/api/quote/{ticker.upper()}",
-                    params=params
-                )
-                
-                if response.status_code != 200:
-                    logger.error(f"BrAPI error for {ticker}: {response.status_code}")
-                    return BarsiCalculator._create_error_response(ticker, "Erro ao buscar dados da API")
-                
-                data = response.json()
-                results = data.get("results", [])
-                
-                if not results:
-                    return BarsiCalculator._create_error_response(ticker, "Ativo não encontrado")
-                
-                quote = results[0]
-                
-                # Log para debug
-                logger.info(f"BrAPI response keys for {ticker}: {quote.keys()}")
-                
-                # Extrair dados
-                current_price = quote.get("regularMarketPrice", 0)
-                
-                # BrAPI pode retornar dividendos em diferentes estruturas
-                # Tentar múltiplos formatos
-                cash_dividends = []
-                
-                # Formato 1: dividendsData.cashDividends
-                dividends_data = quote.get("dividendsData", {})
-                if dividends_data:
-                    cash_dividends = dividends_data.get("cashDividends", [])
-                    logger.info(f"{ticker}: Found {len(cash_dividends)} dividends in dividendsData.cashDividends")
-                
-                # Formato 2: cashDividends diretamente
-                if not cash_dividends:
-                    cash_dividends = quote.get("cashDividends", [])
-                    logger.info(f"{ticker}: Found {len(cash_dividends)} dividends in cashDividends")
-                
-                # Formato 3: historicalDataPrice pode ter dividendos
-                if not cash_dividends:
-                    historical = quote.get("historicalDataPrice", [])
-                    if historical:
-                        logger.info(f"{ticker}: Checking historicalDataPrice for dividends")
-                
-                # Formato 4: summaryProfile.dividendRate (yield atual)
-                summary = quote.get("summaryProfile", {}) or quote.get("defaultKeyStatistics", {})
-                dividend_rate = quote.get("dividendRate", 0) or summary.get("dividendRate", 0)
-                dividend_yield = quote.get("dividendYield", 0) or summary.get("dividendYield", 0)
-                
-                logger.info(f"{ticker}: dividendRate={dividend_rate}, dividendYield={dividend_yield}")
-                
-                if not current_price:
-                    return BarsiCalculator._create_error_response(ticker, "Cotação não disponível")
-                
-                # Calcular dividendos por ano
-                dividend_by_year = BarsiCalculator._group_dividends_by_year(cash_dividends)
-                
-                # Se não encontrou histórico mas tem dividendYield, estimar
-                if not dividend_by_year and dividend_rate and dividend_rate > 0:
-                    current_year = datetime.now().year
-                    # Estimar dividendo anual baseado no dividendRate
-                    dividend_by_year[current_year - 1] = dividend_rate
-                    logger.info(f"{ticker}: Using dividendRate as estimate: R${dividend_rate}")
-                
-                # Se não tem nada, tentar buscar do dividendYield
-                if not dividend_by_year and dividend_yield and dividend_yield > 0:
-                    # dividendYield é em %, converter para valor
-                    estimated_dividend = (dividend_yield / 100) * current_price
-                    current_year = datetime.now().year
-                    dividend_by_year[current_year - 1] = estimated_dividend
-                    logger.info(f"{ticker}: Estimated from dividendYield ({dividend_yield}%): R${estimated_dividend:.2f}")
-                
-                # Calcular média anual (últimos N anos)
-                avg_annual_dividend = BarsiCalculator._calculate_average_dividend(dividend_by_year)
-                
-                # Calcular Preço Teto
-                if avg_annual_dividend > 0:
-                    price_target = avg_annual_dividend / BarsiCalculator.MINIMUM_YIELD
-                else:
-                    price_target = 0
-                
-                # Calcular métricas derivadas
-                current_yield = (avg_annual_dividend / current_price * 100) if current_price > 0 else 0
-                is_below_target = current_price < price_target if price_target > 0 else False
-                upside_to_target = ((price_target - current_price) / current_price * 100) if current_price > 0 and price_target > 0 else 0
-                margin_of_safety = upside_to_target if is_below_target else 0
-                
-                # Definir recomendação
-                recommendation = BarsiCalculator._get_recommendation(
-                    current_price, price_target, current_yield, avg_annual_dividend
-                )
-                
-                return BarsiAnalysis(
-                    ticker=ticker.upper(),
-                    current_price=round(current_price, 2),
-                    average_annual_dividend=round(avg_annual_dividend, 4),
-                    price_target=round(price_target, 2),
-                    current_yield=round(current_yield, 2),
-                    is_below_target=is_below_target,
-                    upside_to_target=round(upside_to_target, 2),
-                    margin_of_safety=round(margin_of_safety, 2),
-                    dividend_history=[
-                        {"year": year, "total": round(total, 4)}
-                        for year, total in sorted(dividend_by_year.items(), reverse=True)
-                    ][:BarsiCalculator.YEARS_HISTORY],
-                    years_analyzed=min(len(dividend_by_year), BarsiCalculator.YEARS_HISTORY),
-                    recommendation=recommendation
-                )
-                
+                # Agrupar por ano
+                dividends_by_year = BarsiCalculator._group_dividends_by_year(dividends)
+            else:
+                logger.warning(f"No dividend data found for {ticker}")
+
+            # Calcular média anual (últimos N anos)
+            avg_annual_dividend = 0
+            if dividends_by_year:
+                avg_annual_dividend = BarsiCalculator._calculate_average_dividend(dividends_by_year)
+            
+            # Se não tem histórico, tentar usar dividend yield atual como estimativa
+            if avg_annual_dividend == 0:
+                dy = quote_data.get("dividend_yield", 0)
+                if dy and dy > 0:
+                     # Estimar dividendo anual baseado no yield atual
+                     avg_annual_dividend = (dy / 100) * current_price
+                     logger.info(f"Estimated dividend from yield for {ticker}: {avg_annual_dividend}")
+
+            # Calcular Preço Teto
+            if avg_annual_dividend > 0:
+                price_target = avg_annual_dividend / BarsiCalculator.MINIMUM_YIELD
+            else:
+                price_target = 0
+            
+            # Calcular métricas derivadas
+            current_yield = (avg_annual_dividend / current_price * 100) if current_price > 0 else 0
+            is_below_target = current_price < price_target if price_target > 0 else False
+            upside_to_target = ((price_target - current_price) / current_price * 100) if current_price > 0 and price_target > 0 else 0
+            margin_of_safety = upside_to_target if is_below_target else 0
+            
+            # Definir recomendação
+            recommendation = BarsiCalculator._get_recommendation(
+                current_price, price_target, current_yield, avg_annual_dividend
+            )
+            
+            return BarsiAnalysis(
+                ticker=ticker.upper(),
+                current_price=round(current_price, 2),
+                average_annual_dividend=round(avg_annual_dividend, 4),
+                price_target=round(price_target, 2),
+                current_yield=round(current_yield, 2),
+                is_below_target=is_below_target,
+                upside_to_target=round(upside_to_target, 2),
+                margin_of_safety=round(margin_of_safety, 2),
+                dividend_history=[
+                    {"year": year, "total": round(total, 4)}
+                    for year, total in sorted(dividends_by_year.items(), reverse=True)
+                ][:BarsiCalculator.YEARS_HISTORY],
+                years_analyzed=min(len(dividends_by_year), BarsiCalculator.YEARS_HISTORY),
+                recommendation=recommendation
+            )
+
         except Exception as e:
             logger.error(f"Error calculating Barsi target for {ticker}: {e}")
             return BarsiCalculator._create_error_response(ticker, str(e))

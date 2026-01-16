@@ -85,6 +85,8 @@ class ReportService:
     @staticmethod
     async def _enrich_with_market_data(assets: List[Dict]) -> List[AssetSummary]:
         """Enriquece os dados dos ativos com informações de mercado"""
+        from app.services.market_data import MarketDataService
+        
         enriched = []
         
         for asset in assets:
@@ -92,45 +94,54 @@ class ReportService:
             
             # Buscar dados atuais
             try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    params = {}
-                    if settings.BRAPI_TOKEN:
-                        params["token"] = settings.BRAPI_TOKEN
+                quote = await MarketDataService.get_quote(ticker)
+                
+                if quote:
+                    current_price = quote.get("current_price") or asset.get('current_price', 0)
                     
-                    response = await client.get(
-                        f"https://brapi.dev/api/quote/{ticker.upper()}",
-                        params=params
-                    )
+                    quantity = asset.get('quantity', 0)
+                    average_price = asset.get('average_price', current_price)
+                    total_invested = quantity * average_price
+                    current_value = quantity * current_price
+                    profit_loss = current_value - total_invested
+                    profit_loss_pct = (profit_loss / total_invested * 100) if total_invested > 0 else 0
                     
-                    if response.status_code == 200:
-                        data = response.json()
-                        results = data.get("results", [])
-                        if results:
-                            quote = results[0]
-                            current_price = quote.get("regularMarketPrice", asset.get('current_price', 0))
-                            
-                            quantity = asset.get('quantity', 0)
-                            average_price = asset.get('average_price', current_price)
-                            total_invested = quantity * average_price
-                            current_value = quantity * current_price
-                            profit_loss = current_value - total_invested
-                            profit_loss_pct = (profit_loss / total_invested * 100) if total_invested > 0 else 0
-                            
-                            enriched.append(AssetSummary(
-                                ticker=ticker.upper(),
-                                name=quote.get('longName', quote.get('shortName', ticker)),
-                                sector=asset.get('sector'),
-                                quantity=quantity,
-                                average_price=average_price,
-                                current_price=current_price,
-                                total_invested=total_invested,
-                                current_value=current_value,
-                                profit_loss=profit_loss,
-                                profit_loss_pct=profit_loss_pct,
-                                weight_pct=0,  # Calculado depois
-                                price_earnings=quote.get('priceEarnings'),
-                                dividend_yield=quote.get('dividendYield')
-                            ))
+                    enriched.append(AssetSummary(
+                        ticker=ticker.upper(),
+                        name=quote.get('name', ticker),
+                        sector=asset.get('sector'),
+                        quantity=quantity,
+                        average_price=average_price,
+                        current_price=current_price,
+                        total_invested=total_invested,
+                        current_value=current_value,
+                        profit_loss=profit_loss,
+                        profit_loss_pct=profit_loss_pct,
+                        weight_pct=0,  # Calculado depois
+                        price_earnings=quote.get('price_earnings'),
+                        dividend_yield=quote.get('dividend_yield')
+                    ))
+                else:
+                    # Fallback com dados locais se API falhar totalmente
+                    logger.warning(f"Could not fetch market data for {ticker}")
+                    current_price = asset.get('current_price', 0)
+                    quantity = asset.get('quantity', 0)
+                    enriched.append(AssetSummary(
+                        ticker=ticker.upper(),
+                        name=ticker,
+                        sector=asset.get('sector'),
+                        quantity=quantity,
+                        average_price=asset.get('average_price', 0),
+                        current_price=current_price,
+                        total_invested=quantity * asset.get('average_price', 0),
+                        current_value=quantity * current_price,
+                        profit_loss=0,
+                        profit_loss_pct=0,
+                        weight_pct=0,
+                        price_earnings=None,
+                        dividend_yield=None
+                    ))
+
             except Exception as e:
                 logger.warning(f"Failed to enrich {ticker}: {e}")
         
