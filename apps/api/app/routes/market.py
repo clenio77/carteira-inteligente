@@ -305,3 +305,68 @@ async def check_if_free(
             "This stock requires a BRAPI token. Get one at https://brapi.dev/dashboard"
         )
     }
+
+
+# ================================
+# BENCHMARKS (IBOV, CDI, SELIC)
+# ================================
+
+from app.services.benchmark_service import BenchmarkService
+
+
+@router.get("/benchmarks")
+async def get_benchmarks():
+    """
+    Get all benchmark data (IBOV, CDI, SELIC)
+    
+    Public endpoint - no authentication required.
+    """
+    return await BenchmarkService.get_all_benchmarks()
+
+
+@router.get("/benchmarks/ibov")
+async def get_ibov():
+    """
+    Get IBOV (Ibovespa) current data
+    """
+    return await BenchmarkService.get_ibov_data()
+
+
+@router.get("/benchmarks/cdi")
+async def get_cdi():
+    """
+    Get CDI rate data
+    """
+    return await BenchmarkService.get_cdi_data()
+
+
+@router.get("/benchmarks/compare")
+async def compare_with_benchmark(
+    portfolio_start: float = Query(..., description="Portfolio initial value"),
+    portfolio_current: float = Query(..., description="Portfolio current value"),
+):
+    """
+    Compare portfolio performance against benchmarks
+    """
+    ibov = await BenchmarkService.get_ibov_data()
+    
+    comparison = BenchmarkService.calculate_ibov_comparison(
+        portfolio_start,
+        portfolio_current,
+        ibov.get("change_1d", 0)
+    )
+    
+    return {
+        "portfolio": {
+            "start_value": portfolio_start,
+            "current_value": portfolio_current,
+            "return_percent": comparison["portfolio_return"]
+        },
+        "ibov": {
+            "return_percent": comparison["ibov_return"],
+            "current": ibov.get("current")
+        },
+        "alpha": comparison["alpha"],
+        "outperformed_ibov": comparison["outperformed"],
+        "cdi_annual_rate": BenchmarkService.FALLBACK_DATA["CDI"]["annual_rate"]
+    }

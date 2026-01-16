@@ -18,9 +18,10 @@
 - [ ] **3.3 Performance relativa (vs benchmark)**
 
 ## Fase 4: Relatórios (2-3 dias)
-- [ ] **4.1 Exportar posições para CSV**
-- [ ] **4.2 Exportar transações para CSV**
-- [ ] **4.3 Relatório para IR** (posição em 31/12)
+- [x] **Exportar posições para CSV** ✅
+- [x] **Exportar transações para CSV** ✅
+- [x] **Exportar proventos para CSV** ✅
+- [ ] **Relatório para IR** (posição em 31/12)
 
 ## Fase 5: Alertas (2 dias)
 - [ ] **5.1 Tabela de alertas de preço**
