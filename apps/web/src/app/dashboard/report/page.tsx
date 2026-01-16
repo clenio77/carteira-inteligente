@@ -72,6 +72,9 @@ export default function PortfolioReportPage() {
         queryKey: ["portfolioReport"],
         queryFn: async () => {
             const response = await api.get("/portfolio/report");
+            if (response.data && response.data.success === false) {
+                throw new Error(response.data.message || "Erro ao gerar relatório");
+            }
             return response.data;
         },
         staleTime: 10 * 60 * 1000, // 10 minutos cache
