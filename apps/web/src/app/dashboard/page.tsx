@@ -27,6 +27,7 @@ import NotificationsMenu from "@/components/notifications-menu";
 import { MarketTicker } from "@/components/market-ticker";
 import { PortfolioHistoryChart } from "@/components/dashboard/portfolio-history-chart";
 import { DividendChart } from "@/components/dashboard/dividend-chart";
+import { AllocationChart } from "@/components/dashboard/allocation-chart";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -316,24 +317,10 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Alocação por Tipo
             </h3>
-            <div className="space-y-3">
-              {portfolio?.allocation_by_type.map((item) => (
-                <div key={item.type}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-700">{item.type}</span>
-                    <span className="font-medium text-gray-900">
-                      {item.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-primary-600 h-2 rounded-full"
-                      style={{ width: `${item.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <AllocationChart
+              data={portfolio?.allocation_by_type || []}
+              totalValue={portfolio?.total_value}
+            />
           </div>
 
           {/* Top Positions */}
