@@ -5,7 +5,7 @@ com estratégia de fallback (BrAPI -> YFinance).
 """
 import logging
 import httpx
-import yfinance as yf
+# import yfinance as yf ## LAZY LOAD
 import pandas as pd
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
@@ -122,6 +122,9 @@ class MarketDataService:
     
     @staticmethod
     async def _get_yfinance_quote(ticker: str) -> Dict[str, Any]:
+        # Lazy Import para evitar erro se a lib falhou em instalar
+        import yfinance as yf
+        
         # YFinance precisa do sufixo .SA para ações brasileiras
         yf_ticker = f"{ticker.upper()}.SA" if not ticker.endswith(".SA") else ticker.upper()
         
@@ -146,6 +149,8 @@ class MarketDataService:
 
     @staticmethod
     async def _get_yfinance_dividends(ticker: str, years: int) -> List[Dict]:
+        import yfinance as yf
+        
         yf_ticker = f"{ticker.upper()}.SA" if not ticker.endswith(".SA") else ticker.upper()
         
         import asyncio
@@ -157,10 +162,6 @@ class MarketDataService:
             
             # Filtrar últimos X anos
             start_date = datetime.now() - timedelta(days=365*years)
-            start_date_tz = start_date.astimezone() if hasattr(start_date, 'astimezone') else start_date
-            
-            # Converter index para datetime aware se necessário
-            # Simplificação: converter tudo para string e parsear
             
             dividends_list = []
             for date, amount in hist.items():
