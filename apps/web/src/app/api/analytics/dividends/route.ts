@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { jwtVerify } from 'jose';
 
+export const dynamic = 'force-dynamic';
+
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
 const jwtSecret = process.env.SECRET_KEY || 'development-secret-key';
