@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/market";
+import { getPortfolioAssets } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import {
     ArrowLeft,
@@ -17,6 +18,8 @@ import {
     Loader2,
     RefreshCw,
     Download,
+    Search,
+    ChevronDown,
 } from "lucide-react";
 
 interface Proceed {
@@ -45,6 +48,15 @@ interface ProceedsSummary {
     total_count: number;
 }
 
+interface PortfolioAsset {
+    ticker: string;
+    name: string;
+    asset_type: string;
+    quantity: number;
+    average_price: number;
+    current_price: number;
+}
+
 const PROCEED_TYPES = [
     { value: "DIVIDEND", label: "Dividendo" },
     { value: "JCP", label: "JCP" },
@@ -65,6 +77,10 @@ export default function ProceedsPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [showAddForm, setShowAddForm] = useState(false);
+    const [showAssetDropdown, setShowAssetDropdown] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedAsset, setSelectedAsset] = useState<PortfolioAsset | null>(null);
+
     const [formData, setFormData] = useState({
         ticker: "",
         proceed_type: "DIVIDEND",
@@ -73,6 +89,18 @@ export default function ProceedsPage() {
         quantity: "",
         description: "",
     });
+
+    // Fetch portfolio assets for autocomplete
+    const { data: portfolioAssets } = useQuery<PortfolioAsset[]>({
+        queryKey: ["portfolioAssets"],
+        queryFn: getPortfolioAssets,
+    });
+
+    // Filter assets based on search
+    const filteredAssets = portfolioAssets?.filter(asset =>
+        asset.ticker.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        asset.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
 
     // Fetch proceeds
     const { data: proceedsData, isLoading } = useQuery<ProceedsData>({
@@ -92,6 +120,18 @@ export default function ProceedsPage() {
         },
     });
 
+    // Handle asset selection
+    const handleSelectAsset = (asset: PortfolioAsset) => {
+        setSelectedAsset(asset);
+        setFormData({
+            ...formData,
+            ticker: asset.ticker,
+            quantity: asset.quantity.toString(),
+        });
+        setSearchQuery(asset.ticker);
+        setShowAssetDropdown(false);
+    };
+
     // Add proceed mutation
     const addProceedMutation = useMutation({
         mutationFn: async (data: typeof formData) => {
@@ -110,6 +150,8 @@ export default function ProceedsPage() {
             queryClient.invalidateQueries({ queryKey: ["proceeds"] });
             queryClient.invalidateQueries({ queryKey: ["proceeds-summary"] });
             setShowAddForm(false);
+            setSelectedAsset(null);
+            setSearchQuery("");
             setFormData({
                 ticker: "",
                 proceed_type: "DIVIDEND",
@@ -248,18 +290,59 @@ export default function ProceedsPage() {
                             Cadastrar Novo Provento
                         </h3>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
+                            {/* Asset Selector with Autocomplete */}
+                            <div className="relative">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Ticker
+                                    Ativo da Carteira
                                 </label>
-                                <input
-                                    type="text"
-                                    value={formData.ticker}
-                                    onChange={(e) => setFormData({ ...formData, ticker: e.target.value })}
-                                    placeholder="PETR4"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    required
-                                />
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => {
+                                            setSearchQuery(e.target.value);
+                                            setShowAssetDropdown(true);
+                                            setFormData({ ...formData, ticker: e.target.value });
+                                        }}
+                                        onFocus={() => setShowAssetDropdown(true)}
+                                        placeholder="Buscar ativo..."
+                                        className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    />
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                </div>
+
+                                {/* Dropdown with portfolio assets */}
+                                {showAssetDropdown && filteredAssets.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-[200px] overflow-y-auto z-50">
+                                        {filteredAssets.map((asset) => (
+                                            <button
+                                                key={asset.ticker}
+                                                type="button"
+                                                onClick={() => handleSelectAsset(asset)}
+                                                className="w-full flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                            >
+                                                <div className="text-left">
+                                                    <p className="font-semibold text-gray-900">{asset.ticker}</p>
+                                                    <p className="text-xs text-gray-500">{asset.name}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-sm font-medium text-gray-900">
+                                                        {asset.quantity} cotas
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">{asset.asset_type}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Show selected asset info */}
+                                {selectedAsset && (
+                                    <p className="text-xs text-green-600 mt-1">
+                                        ✓ {selectedAsset.quantity} cotas de {selectedAsset.ticker}
+                                    </p>
+                                )}
                             </div>
 
                             <div>
@@ -298,7 +381,7 @@ export default function ProceedsPage() {
                                 </label>
                                 <input
                                     type="number"
-                                    step="0.01"
+                                    step="0.0001"
                                     value={formData.value_per_share}
                                     onChange={(e) => setFormData({ ...formData, value_per_share: e.target.value })}
                                     placeholder="0.50"
@@ -316,16 +399,21 @@ export default function ProceedsPage() {
                                     value={formData.quantity}
                                     onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                                     placeholder="100"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-gray-50"
                                     required
                                 />
+                                {selectedAsset && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Preenchido automaticamente
+                                    </p>
+                                )}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Total Calculado
                                 </label>
-                                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-lg font-semibold text-green-600">
+                                <div className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-lg font-semibold text-green-600">
                                     {formatCurrency(calculatedTotal)}
                                 </div>
                             </div>
@@ -359,7 +447,11 @@ export default function ProceedsPage() {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => setShowAddForm(false)}
+                                    onClick={() => {
+                                        setShowAddForm(false);
+                                        setSelectedAsset(null);
+                                        setSearchQuery("");
+                                    }}
                                 >
                                     Cancelar
                                 </Button>
