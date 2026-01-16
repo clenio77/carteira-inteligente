@@ -235,21 +235,24 @@ class BrapiService:
                     return BrapiService._cache[CACHE_KEY]
                 
                 # Construct mock response from fallback_data for requested tickers
+                # Only use fallback if we have REAL data for the ticker, otherwise return failure
                 mock_results = []
+                missing_tickers = []
                 for t in tickers:
-                    # Try to find in fallback or use generic
+                    # Try to find in fallback or mark as missing
                     t_upper = t.upper()
                     if t_upper in BrapiService._fallback_data:
                          mock_results.append(BrapiService._fallback_data[t_upper])
                     else:
-                         # Generic mock to prevent crash
-                         mock_results.append({
-                             "symbol": t, "shortName": t, "regularMarketPrice": 10.0, 
-                             "regularMarketChangePercent": 0.0, "logourl": "", "regularMarketVolume": 0
-                         })
-                         
-                normalized = [BrapiService._normalize_quote(r) for r in mock_results]
-                return {"success": True, "data": normalized, "note": "Data from Fallback (API Error)"}
+                         # Don't use generic R$10 - mark as missing instead
+                         missing_tickers.append(t)
+                
+                if mock_results:
+                    normalized = [BrapiService._normalize_quote(r) for r in mock_results]
+                    return {"success": True, "data": normalized, "note": "Partial data from Fallback"}
+                else:
+                    # No valid fallback data - return failure to prevent overwriting
+                    return {"success": False, "error": "API unavailable and no fallback data", "missing": missing_tickers}
 
             normalized = [BrapiService._normalize_quote(r) for r in all_results]
             
