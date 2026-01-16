@@ -30,9 +30,21 @@
 
 ---
 
+## 🆕 Fase 6: Calculadora Preço Teto Barsi (NOVO!)
+- [x] **Serviço de cálculo Barsi** (dividendos / 6%) ✅
+- [x] **API endpoint /market/barsi/{ticker}** ✅
+- [x] **Página frontend com busca e resultados** ✅
+- [x] **Histórico de dividendos por ano** ✅
+- [x] **Recomendação de compra/venda** ✅
+- [ ] **Análise em lote da carteira**
+- [ ] **Integração com API Bacen SGS para CDI/SELIC reais**
+
+---
+
 ## Prioridade de Execução:
 1. ✅ Gráfico de Alocação (visual, impacto imediato)
 2. ✅ Proventos (funcionalidade core)
-3. Benchmarks (análise)
-4. Exportar CSV (praticidade)
-5. Alertas (nice to have)
+3. ✅ Benchmarks (análise)
+4. ✅ Exportar CSV (praticidade)
+5. ✅ **Calculadora Preço Teto Barsi** (diferencial competitivo!)
+6. Alertas (nice to have)
