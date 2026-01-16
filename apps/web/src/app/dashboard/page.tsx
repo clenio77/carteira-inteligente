@@ -29,6 +29,7 @@ import { PortfolioHistoryChart } from "@/components/dashboard/portfolio-history-
 import { DividendChart } from "@/components/dashboard/dividend-chart";
 import { AllocationChart } from "@/components/dashboard/allocation-chart";
 import { BenchmarkComparison } from "@/components/dashboard/benchmark-comparison";
+import { MarketIntelligence } from "@/components/dashboard/market-intelligence";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -376,9 +377,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Benchmark Comparison */}
-        <div className="mt-6">
+        {/* Benchmark Comparison & Market Intelligence */}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <BenchmarkComparison portfolioReturn={portfolio?.profit_loss_percentage || 0} />
+          <MarketIntelligence
+            portfolioTickers={portfolio?.top_positions?.map(p => p.ticker) || []}
+          />
         </div>
       </div>
     </div>

@@ -422,3 +422,70 @@ async def analyze_portfolio_barsi(
         "opportunities": sum(1 for a in analyses if a.is_below_target),
         "analyses": [asdict(a) for a in analyses]
     }
+
+
+# ================================
+# MARKET INTELLIGENCE (Volatility & Anomalies)
+# ================================
+
+from app.services.market_intelligence import MarketIntelligence
+
+
+@router.get("/intelligence/volatility/{ticker}")
+async def get_volatility_score(ticker: str):
+    """
+    Calcula o score de volatilidade de um ativo.
+    
+    Retorna:
+    - Score de 1-10 (1=baixa, 10=extrema)
+    - Desvio padrão diário
+    - Max drawdown dos últimos 30 dias
+    - Tendência (alta/baixa/lateral)
+    - Recomendação
+    """
+    score = await MarketIntelligence.calculate_volatility(ticker)
+    return asdict(score)
+
+
+@router.get("/intelligence/anomalies/{ticker}")
+async def get_anomalies(ticker: str):
+    """
+    Detecta anomalias em um ativo.
+    
+    Verifica:
+    - Volume atípico (muito acima/abaixo da média)
+    - Movimentos de preço fora do padrão
+    
+    Retorna lista de anomalias detectadas com severidade.
+    """
+    anomalies = await MarketIntelligence.detect_anomalies(ticker)
+    return {
+        "ticker": ticker.upper(),
+        "anomalies_count": len(anomalies),
+        "anomalies": [asdict(a) for a in anomalies]
+    }
+
+
+@router.get("/intelligence/portfolio-risk")
+async def analyze_portfolio_risk(
+    tickers: str = Query(..., description="Comma-separated list of tickers (e.g., PETR4,BBAS3,ITSA4)")
+):
+    """
+    Analisa o risco de uma carteira inteira.
+    
+    Retorna:
+    - Volatilidade média da carteira
+    - Quantidade de ativos em alta volatilidade
+    - Anomalias detectadas
+    - Nível de risco geral
+    """
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    
+    if not ticker_list:
+        raise HTTPException(status_code=400, detail="Nenhum ticker fornecido")
+    
+    if len(ticker_list) > 20:
+        raise HTTPException(status_code=400, detail="Máximo de 20 ativos por análise")
+    
+    result = await MarketIntelligence.analyze_portfolio_risk(ticker_list)
+    return result
