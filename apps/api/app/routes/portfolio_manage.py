@@ -1119,3 +1119,168 @@ async def get_proceeds_summary(
         "total_count": len(proceeds),
     }
 
+
+# ================================
+# CSV EXPORT Endpoints
+# ================================
+
+from fastapi.responses import StreamingResponse
+
+
+@router.get("/export/positions")
+async def export_positions_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Export all positions to CSV format
+    """
+    positions = (
+        db.query(AssetPosition)
+        .filter(AssetPosition.user_id == current_user.id)
+        .filter(AssetPosition.quantity > 0)
+        .all()
+    )
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow([
+        "Ticker", "Nome", "Tipo", "Quantidade", "Preço Médio", 
+        "Preço Atual", "Valor Total", "Lucro/Prejuízo", "Rentabilidade %"
+    ])
+    
+    for pos in positions:
+        asset = db.query(Asset).filter(Asset.id == pos.asset_id).first()
+        ticker = asset.ticker if asset else pos.ticker or "N/A"
+        name = asset.name if asset else pos.asset_name or ticker
+        asset_type = asset.type.value if asset and asset.type else pos.asset_type or "N/A"
+        
+        current_price = pos.current_price or pos.average_price
+        total_value = pos.quantity * current_price if current_price else 0
+        invested = pos.quantity * pos.average_price if pos.average_price else 0
+        profit_loss = total_value - invested
+        profit_pct = (profit_loss / invested * 100) if invested else 0
+        
+        writer.writerow([
+            ticker,
+            name,
+            asset_type,
+            pos.quantity,
+            f"{pos.average_price:.2f}" if pos.average_price else "0.00",
+            f"{current_price:.2f}" if current_price else "0.00",
+            f"{total_value:.2f}",
+            f"{profit_loss:.2f}",
+            f"{profit_pct:.2f}%"
+        ])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=posicoes_{date.today().isoformat()}.csv"}
+    )
+
+
+@router.get("/export/transactions")
+async def export_transactions_csv(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Export all transactions to CSV format
+    """
+    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+    
+    if start_date:
+        query = query.filter(Transaction.date >= start_date)
+    if end_date:
+        query = query.filter(Transaction.date <= end_date)
+    
+    transactions = query.order_by(Transaction.date.desc()).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow([
+        "Data", "Ticker", "Tipo", "Quantidade", "Preço Unitário", 
+        "Valor Total", "Taxas", "Corretora", "Notas"
+    ])
+    
+    for tx in transactions:
+        asset = db.query(Asset).filter(Asset.id == tx.asset_id).first()
+        ticker = asset.ticker if asset else tx.ticker or "N/A"
+        
+        writer.writerow([
+            tx.date.strftime("%d/%m/%Y") if tx.date else "",
+            ticker,
+            tx.type.value if tx.type else tx.transaction_type or "N/A",
+            tx.quantity,
+            f"{tx.price:.2f}" if tx.price else "0.00",
+            f"{tx.total_amount:.2f}" if tx.total_amount else "0.00",
+            f"{tx.fees:.2f}" if tx.fees else "0.00",
+            tx.broker or "",
+            tx.notes or ""
+        ])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=transacoes_{date.today().isoformat()}.csv"}
+    )
+
+
+@router.get("/export/proceeds")
+async def export_proceeds_csv(
+    year: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Export all proceeds to CSV format
+    """
+    query = db.query(Proceed).filter(Proceed.user_id == current_user.id)
+    
+    if year:
+        from sqlalchemy import extract
+        query = query.filter(extract('year', Proceed.date) == year)
+    
+    proceeds = query.order_by(Proceed.date.desc()).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow([
+        "Data", "Ticker", "Nome", "Tipo", "Valor por Ação", 
+        "Quantidade", "Valor Total", "Descrição"
+    ])
+    
+    for p in proceeds:
+        asset = db.query(Asset).filter(Asset.id == p.asset_id).first()
+        
+        writer.writerow([
+            p.date.strftime("%d/%m/%Y") if p.date else "",
+            asset.ticker if asset else "N/A",
+            asset.name if asset else "N/A",
+            p.type.value if p.type else "N/A",
+            f"{p.value_per_share:.4f}" if p.value_per_share else "0.00",
+            p.quantity,
+            f"{p.total_value:.2f}" if p.total_value else "0.00",
+            p.description or ""
+        ])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=proventos_{date.today().isoformat()}.csv"}
+    )

@@ -16,6 +16,7 @@ import {
   RefreshCw,
   CheckCircle,
   Zap,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -186,6 +187,15 @@ export default function AssetsPage() {
                     Atualizar Preços
                   </>
                 )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/portfolio/manage/export/positions`, '_blank');
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Exportar CSV
               </Button>
             </div>
 

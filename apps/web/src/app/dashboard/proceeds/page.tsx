@@ -16,6 +16,7 @@ import {
     TrendingUp,
     Loader2,
     RefreshCw,
+    Download,
 } from "lucide-react";
 
 interface Proceed {
@@ -164,10 +165,21 @@ export default function ProceedsPage() {
                             <p className="text-gray-500">Gerencie seus dividendos, JCP e rendimentos</p>
                         </div>
                     </div>
-                    <Button onClick={() => setShowAddForm(!showAddForm)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Novo Provento
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button onClick={() => setShowAddForm(!showAddForm)}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Novo Provento
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/portfolio/manage/export/proceeds`, '_blank');
+                            }}
+                        >
+                            <Download className="w-4 h-4 mr-2" />
+                            Exportar CSV
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}

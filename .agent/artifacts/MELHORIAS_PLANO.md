@@ -3,14 +3,14 @@
 ## Fase 1: Quick Wins (Hoje/Amanhã)
 - [x] ~~Corrigir fallback de preços genéricos~~
 - [x] ~~Aumentar delay do Brapi para evitar rate limit~~
-- [ ] **1.1 Gráfico de Alocação por Tipo** (Pizza: Ações, FIIs, RF)
-- [ ] **1.2 Atualização automática de preços** (Cron job diário)
+- [x] **Gráfico de Alocação por Tipo** (Pizza: Ações, FIIs, RF) ✅
+- [ ] **Atualização automática de preços** (Cron job diário)
 
 ## Fase 2: Proventos (2-3 dias)
-- [ ] **2.1 Tabela de proventos** (cadastro manual)
-- [ ] **2.2 Tela de cadastro de proventos**
-- [ ] **2.3 Dashboard de proventos recebidos** (gráfico mensal)
-- [ ] **2.4 Yield on Cost** (dividendo / preço médio)
+- [x] **API de proventos** (CRUD + Summary) ✅
+- [x] **Tela de cadastro de proventos** ✅
+- [x] **Dashboard de proventos recebidos** (tabela + cards) ✅
+- [ ] **Yield on Cost** (dividendo / preço médio Ativos)
 
 ## Fase 3: Comparação com Benchmarks (2 dias)
 - [ ] **3.1 Buscar dados do IBOV e CDI**
