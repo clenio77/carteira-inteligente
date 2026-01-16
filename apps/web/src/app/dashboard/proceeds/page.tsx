@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/market";
-import { getPortfolioAssets } from "@/lib/portfolio";
+import { getPortfolioAssets, AssetPosition } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import {
     ArrowLeft,
@@ -48,15 +48,6 @@ interface ProceedsSummary {
     total_count: number;
 }
 
-interface PortfolioAsset {
-    ticker: string;
-    name: string;
-    asset_type: string;
-    quantity: number;
-    average_price: number;
-    current_price: number;
-}
-
 const PROCEED_TYPES = [
     { value: "DIVIDEND", label: "Dividendo" },
     { value: "JCP", label: "JCP" },
@@ -79,7 +70,7 @@ export default function ProceedsPage() {
     const [showAddForm, setShowAddForm] = useState(false);
     const [showAssetDropdown, setShowAssetDropdown] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedAsset, setSelectedAsset] = useState<PortfolioAsset | null>(null);
+    const [selectedAsset, setSelectedAsset] = useState<AssetPosition | null>(null);
 
     const [formData, setFormData] = useState({
         ticker: "",
@@ -91,15 +82,15 @@ export default function ProceedsPage() {
     });
 
     // Fetch portfolio assets for autocomplete
-    const { data: portfolioAssets } = useQuery<PortfolioAsset[]>({
+    const { data: portfolioAssets } = useQuery<AssetPosition[]>({
         queryKey: ["portfolioAssets"],
         queryFn: getPortfolioAssets,
     });
 
     // Filter assets based on search
-    const filteredAssets = portfolioAssets?.filter(asset =>
-        asset.ticker.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        asset.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredAssets = portfolioAssets?.filter(pos =>
+        pos.asset.ticker.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        pos.asset.name?.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
     // Fetch proceeds
@@ -121,14 +112,14 @@ export default function ProceedsPage() {
     });
 
     // Handle asset selection
-    const handleSelectAsset = (asset: PortfolioAsset) => {
-        setSelectedAsset(asset);
+    const handleSelectAsset = (pos: AssetPosition) => {
+        setSelectedAsset(pos);
         setFormData({
             ...formData,
-            ticker: asset.ticker,
-            quantity: asset.quantity.toString(),
+            ticker: pos.asset.ticker,
+            quantity: pos.quantity.toString(),
         });
-        setSearchQuery(asset.ticker);
+        setSearchQuery(pos.asset.ticker);
         setShowAssetDropdown(false);
     };
 
@@ -315,22 +306,22 @@ export default function ProceedsPage() {
                                 {/* Dropdown with portfolio assets */}
                                 {showAssetDropdown && filteredAssets.length > 0 && (
                                     <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-[200px] overflow-y-auto z-50">
-                                        {filteredAssets.map((asset) => (
+                                        {filteredAssets.map((pos) => (
                                             <button
-                                                key={asset.ticker}
+                                                key={pos.asset.ticker}
                                                 type="button"
-                                                onClick={() => handleSelectAsset(asset)}
+                                                onClick={() => handleSelectAsset(pos)}
                                                 className="w-full flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
                                             >
                                                 <div className="text-left">
-                                                    <p className="font-semibold text-gray-900">{asset.ticker}</p>
-                                                    <p className="text-xs text-gray-500">{asset.name}</p>
+                                                    <p className="font-semibold text-gray-900">{pos.asset.ticker}</p>
+                                                    <p className="text-xs text-gray-500">{pos.asset.name}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-sm font-medium text-gray-900">
-                                                        {asset.quantity} cotas
+                                                        {pos.quantity} cotas
                                                     </p>
-                                                    <p className="text-xs text-gray-500">{asset.asset_type}</p>
+                                                    <p className="text-xs text-gray-500">{pos.asset.type}</p>
                                                 </div>
                                             </button>
                                         ))}
@@ -340,7 +331,7 @@ export default function ProceedsPage() {
                                 {/* Show selected asset info */}
                                 {selectedAsset && (
                                     <p className="text-xs text-green-600 mt-1">
-                                        ✓ {selectedAsset.quantity} cotas de {selectedAsset.ticker}
+                                        ✓ {selectedAsset.quantity} cotas de {selectedAsset.asset.ticker}
                                     </p>
                                 )}
                             </div>

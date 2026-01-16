@@ -37,10 +37,10 @@ interface BarsiAnalysis {
 
 interface SearchResult {
     stock: string;
-    name: string;
-    close: number;
-    change: number;
-    logo?: string;
+    name: string | null;
+    close: number | null;
+    change: number | null;
+    logo?: string | null;
 }
 
 export default function BarsiCalculatorPage() {
@@ -185,8 +185,8 @@ export default function BarsiCalculatorPage() {
                                             <p className="font-medium text-gray-900">
                                                 {formatCurrency(result.close)}
                                             </p>
-                                            <p className={`text-sm ${result.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {result.change >= 0 ? '+' : ''}{result.change?.toFixed(2)}%
+                                            <p className={`text-sm ${(result.change ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {(result.change ?? 0) >= 0 ? '+' : ''}{(result.change ?? 0).toFixed(2)}%
                                             </p>
                                         </div>
                                     </button>
