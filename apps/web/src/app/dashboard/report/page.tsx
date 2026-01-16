@@ -188,7 +188,7 @@ export default function PortfolioReportPage() {
                             Erro ao gerar relatório
                         </h2>
                         <p className="text-red-600">
-                            Não foi possível gerar o relatório. Tente novamente.
+                            {error instanceof Error ? error.message : JSON.stringify(error)}
                         </p>
                     </div>
                 )}
