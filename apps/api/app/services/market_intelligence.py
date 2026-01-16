@@ -408,12 +408,18 @@ class MarketIntelligence:
         )
     
     @staticmethod
-    async def get_ai_insight(ticker: str, volatility_data: Dict[str, Any], anomalies: List[Dict] = None) -> str:
+    async def get_ai_insight(
+        ticker: str, 
+        volatility_data: Dict[str, Any], 
+        anomalies: List[Dict] = None,
+        fundamentals: Dict[str, Any] = None,
+        macro_context: Dict[str, Any] = None
+    ) -> str:
         """
         Usa Google Gemini para gerar insights inteligentes sobre a volatilidade.
         
-        Analisa os dados quantitativos e gera um contexto em linguagem natural
-        explicando POR QUE o ativo está se comportando dessa forma.
+        Analisa os dados quantitativos + macro + fundamentalistas e gera um contexto
+        em linguagem natural explicando POR QUE o ativo está se comportando dessa forma.
         """
         import google.generativeai as genai
         from app.core.config import settings
@@ -425,29 +431,54 @@ class MarketIntelligence:
             genai.configure(api_key=settings.GOOGLE_API_KEY)
             model = genai.GenerativeModel("gemini-1.5-flash")
             
-            # Construir prompt com dados
+            # Construir contexto de anomalias
             anomaly_text = ""
             if anomalies:
                 anomaly_text = f"\nAnomalias detectadas: {', '.join(a.get('message', '') for a in anomalies[:3])}"
             
+            # Construir contexto de fundamentalistas
+            fundamental_text = ""
+            if fundamentals:
+                pe = fundamentals.get('priceEarnings')
+                eps = fundamentals.get('earningsPerShare')
+                market_cap = fundamentals.get('marketCap')
+                div_yield = fundamentals.get('dividendYield')
+                
+                parts = []
+                if pe: parts.append(f"P/L: {pe:.1f}")
+                if eps: parts.append(f"LPA: R$ {eps:.2f}")
+                if market_cap: parts.append(f"Market Cap: R$ {market_cap/1e9:.1f}B")
+                if div_yield: parts.append(f"DY: {div_yield:.1f}%")
+                
+                if parts:
+                    fundamental_text = f"\nIndicadores: {', '.join(parts)}"
+            
+            # Construir contexto macroeconômico
+            macro_text = ""
+            if macro_context:
+                macro_text = f"\nCenário Macro: {macro_context.get('resumo', 'N/A')}"
+            
             prompt = f"""Você é um analista de mercado brasileiro especializado em B3.
-Analise os seguintes dados de {ticker} e forneça um insight CURTO (máximo 2-3 frases) sobre o comportamento do ativo.
+Analise os seguintes dados de {ticker} e forneça um insight CURTO (máximo 3-4 frases) sobre o comportamento do ativo.
 
-DADOS:
+DADOS DO ATIVO:
 - Ticker: {volatility_data.get('ticker', ticker)}
 - Preço atual: R$ {volatility_data.get('current_price', 'N/A')}
 - Volatilidade diária: {volatility_data.get('volatility_daily', 0):.2f}%
-- Nível: {volatility_data.get('volatility_level', 'N/A')}
+- Nível volatilidade: {volatility_data.get('volatility_level', 'N/A')}
 - Max Drawdown (30d): {volatility_data.get('max_drawdown_30d', 0):.1f}%
-- Tendência: {volatility_data.get('trend', 'N/A')}{anomaly_text}
+- Tendência: {volatility_data.get('trend', 'N/A')}{fundamental_text}{anomaly_text}
+
+CONTEXTO MACROECONÔMICO:{macro_text}
 
 REGRAS:
-1. Seja BREVE (2-3 frases no máximo)
-2. Foque no contexto do setor se souber (ex: Petrobras = petróleo, bancos = juros)
-3. NÃO dê recomendação de compra/venda
-4. NÃO mencione preços-alvo
-5. Use linguagem acessível para investidor pessoa física
-6. Comece com um emoji relevante
+1. Seja BREVE (3-4 frases no máximo)
+2. RELACIONE o ativo com o cenário macro quando relevante (ex: bancos x SELIC, FIIs x juros)
+3. Use os indicadores fundamentalistas se disponíveis para contextualizar valuation
+4. NÃO dê recomendação de compra/venda
+5. NÃO mencione preços-alvo específicos
+6. Use linguagem acessível para investidor pessoa física
+7. Comece com um emoji relevante ao setor
 
 RESPOSTA:"""
             
@@ -457,8 +488,8 @@ RESPOSTA:"""
                 # Limpar resposta
                 insight = response.text.strip()
                 # Limitar tamanho
-                if len(insight) > 300:
-                    insight = insight[:297] + "..."
+                if len(insight) > 400:
+                    insight = insight[:397] + "..."
                 return insight
             
             return "💡 Não foi possível gerar insight para este ativo"
@@ -472,9 +503,14 @@ RESPOSTA:"""
         """
         Retorna análise completa de um ativo com:
         - Dados quantitativos (volatilidade, anomalias)
-        - Insight de IA (Gemini)
+        - Indicadores fundamentalistas (P/L, LPA, Market Cap)
+        - Contexto macroeconômico (SELIC, IPCA, Dólar)
+        - Insight de IA (Gemini) integrando tudo
         """
         from dataclasses import asdict
+        from app.services.bcb_service import BCBService
+        from app.core.config import settings
+        import httpx
         
         # Buscar dados quantitativos
         volatility = await MarketIntelligence.calculate_volatility(ticker)
@@ -483,17 +519,57 @@ RESPOSTA:"""
         volatility_dict = asdict(volatility)
         anomalies_list = [asdict(a) for a in anomalies]
         
-        # Gerar insight com IA
+        # Buscar contexto macroeconômico (BCB)
+        try:
+            macro_context = await BCBService.get_macro_context()
+        except Exception as e:
+            logger.warning(f"Failed to get macro context: {e}")
+            macro_context = None
+        
+        # Buscar indicadores fundamentalistas (BrAPI)
+        fundamentals = None
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                params = {"fundamental": "true"}
+                if settings.BRAPI_TOKEN:
+                    params["token"] = settings.BRAPI_TOKEN
+                
+                response = await client.get(
+                    f"https://brapi.dev/api/quote/{ticker.upper()}",
+                    params=params
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    results = data.get("results", [])
+                    if results:
+                        quote = results[0]
+                        fundamentals = {
+                            "priceEarnings": quote.get("priceEarnings"),
+                            "earningsPerShare": quote.get("earningsPerShare"),
+                            "marketCap": quote.get("marketCap"),
+                            "dividendYield": quote.get("dividendYield"),
+                            "fiftyTwoWeekHigh": quote.get("fiftyTwoWeekHigh"),
+                            "fiftyTwoWeekLow": quote.get("fiftyTwoWeekLow"),
+                        }
+        except Exception as e:
+            logger.warning(f"Failed to get fundamentals: {e}")
+        
+        # Gerar insight com IA (incluindo macro + fundamentals)
         ai_insight = await MarketIntelligence.get_ai_insight(
             ticker, 
             volatility_dict, 
-            anomalies_list
+            anomalies_list,
+            fundamentals,
+            macro_context
         )
         
         return {
             "ticker": ticker.upper(),
             "volatility": volatility_dict,
             "anomalies": anomalies_list,
+            "fundamentals": fundamentals,
+            "macro": macro_context,
             "ai_insight": ai_insight,
             "analyzed_at": datetime.now().isoformat()
         }

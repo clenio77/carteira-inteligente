@@ -13,7 +13,9 @@ import {
     Brain,
     X,
     Sparkles,
-    ChevronRight,
+    DollarSign,
+    BarChart3,
+    Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +39,21 @@ interface FullAnalysis {
         message: string;
         deviation_percent: number;
     }[];
+    fundamentals?: {
+        priceEarnings?: number;
+        earningsPerShare?: number;
+        marketCap?: number;
+        dividendYield?: number;
+        fiftyTwoWeekHigh?: number;
+        fiftyTwoWeekLow?: number;
+    };
+    macro?: {
+        selic: number;
+        cdi: number;
+        ipca_12m: number;
+        dolar: number;
+        resumo: string;
+    };
     ai_insight: string;
     analyzed_at: string;
 }
@@ -71,6 +88,13 @@ export function AssetAnalysisModal({ ticker, onClose }: AssetAnalysisModalProps)
             extrema: "bg-red-100 text-red-800",
         };
         return colors[level] || "bg-gray-100 text-gray-800";
+    };
+
+    const formatMarketCap = (value: number) => {
+        if (value >= 1e12) return `R$ ${(value / 1e12).toFixed(1)}T`;
+        if (value >= 1e9) return `R$ ${(value / 1e9).toFixed(1)}B`;
+        if (value >= 1e6) return `R$ ${(value / 1e6).toFixed(1)}M`;
+        return formatCurrency(value);
     };
 
     return (
@@ -186,15 +210,103 @@ export function AssetAnalysisModal({ ticker, onClose }: AssetAnalysisModalProps)
                                             <div
                                                 key={idx}
                                                 className={`text-sm p-3 rounded-lg border ${anomaly.severity === "high"
-                                                        ? "bg-red-50 border-red-200 text-red-800"
-                                                        : anomaly.severity === "medium"
-                                                            ? "bg-yellow-50 border-yellow-200 text-yellow-800"
-                                                            : "bg-blue-50 border-blue-200 text-blue-800"
+                                                    ? "bg-red-50 border-red-200 text-red-800"
+                                                    : anomaly.severity === "medium"
+                                                        ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+                                                        : "bg-blue-50 border-blue-200 text-blue-800"
                                                     }`}
                                             >
                                                 {anomaly.message}
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Fundamentals */}
+                            {analysis.fundamentals && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                                        <BarChart3 className="w-4 h-4 text-blue-500" />
+                                        Indicadores Fundamentalistas
+                                    </h4>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {analysis.fundamentals.priceEarnings && (
+                                            <div className="p-2 bg-gray-50 rounded-lg text-center">
+                                                <p className="text-xs text-gray-500">P/L</p>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    {analysis.fundamentals.priceEarnings.toFixed(1)}x
+                                                </p>
+                                            </div>
+                                        )}
+                                        {analysis.fundamentals.earningsPerShare && (
+                                            <div className="p-2 bg-gray-50 rounded-lg text-center">
+                                                <p className="text-xs text-gray-500">LPA</p>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    R$ {analysis.fundamentals.earningsPerShare.toFixed(2)}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {analysis.fundamentals.marketCap && (
+                                            <div className="p-2 bg-gray-50 rounded-lg text-center">
+                                                <p className="text-xs text-gray-500">Market Cap</p>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    {formatMarketCap(analysis.fundamentals.marketCap)}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {analysis.fundamentals.dividendYield && (
+                                            <div className="p-2 bg-gray-50 rounded-lg text-center">
+                                                <p className="text-xs text-gray-500">DY</p>
+                                                <p className="text-sm font-bold text-green-600">
+                                                    {analysis.fundamentals.dividendYield.toFixed(1)}%
+                                                </p>
+                                            </div>
+                                        )}
+                                        {analysis.fundamentals.fiftyTwoWeekLow && analysis.fundamentals.fiftyTwoWeekHigh && (
+                                            <div className="p-2 bg-gray-50 rounded-lg text-center col-span-2">
+                                                <p className="text-xs text-gray-500">52 Semanas</p>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    {formatCurrency(analysis.fundamentals.fiftyTwoWeekLow)} - {formatCurrency(analysis.fundamentals.fiftyTwoWeekHigh)}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Macro Context */}
+                            {analysis.macro && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                                        <Percent className="w-4 h-4 text-green-500" />
+                                        Cenário Macro (BCB)
+                                    </h4>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        <div className="p-2 bg-green-50 rounded-lg text-center">
+                                            <p className="text-xs text-gray-500">SELIC</p>
+                                            <p className="text-sm font-bold text-green-700">
+                                                {analysis.macro.selic}%
+                                            </p>
+                                        </div>
+                                        <div className="p-2 bg-green-50 rounded-lg text-center">
+                                            <p className="text-xs text-gray-500">CDI</p>
+                                            <p className="text-sm font-bold text-green-700">
+                                                {analysis.macro.cdi.toFixed(1)}%
+                                            </p>
+                                        </div>
+                                        <div className="p-2 bg-orange-50 rounded-lg text-center">
+                                            <p className="text-xs text-gray-500">IPCA 12m</p>
+                                            <p className="text-sm font-bold text-orange-700">
+                                                {analysis.macro.ipca_12m}%
+                                            </p>
+                                        </div>
+                                        <div className="p-2 bg-blue-50 rounded-lg text-center">
+                                            <p className="text-xs text-gray-500">Dólar</p>
+                                            <p className="text-sm font-bold text-blue-700">
+                                                R$ {analysis.macro.dolar.toFixed(2)}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             )}
