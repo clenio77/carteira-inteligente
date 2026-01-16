@@ -182,7 +182,7 @@ class BrapiService:
                  return BrapiService._cache[CACHE_KEY]
 
         try:
-            BATCH_SIZE = 5
+            BATCH_SIZE = 3  # Reduced to avoid rate limiting
             all_results = []
             
             # Helper to process a single batch
@@ -226,7 +226,7 @@ class BrapiService:
                     all_results.extend(batch_results)
                 
                 if i + BATCH_SIZE < len(tickers):
-                    await __import__("asyncio").sleep(1.5)
+                    await __import__("asyncio").sleep(5)  # Increased delay to avoid 429 rate limit
 
             if not all_results:
                 # FALLBACK STRATEGY: Return Cache (expired) or Mock Data
