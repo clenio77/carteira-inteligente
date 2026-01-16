@@ -19,7 +19,8 @@
     "GOOGLE_API_KEY",
     "SUPABASE_PASSWORD",
     "SUPABASE_URL",
-    "SECRET_KEY"
+    "SECRET_KEY",
+    "SUPABASE_SERVICE_KEY"
   ],
   "tasks": {
     "build": {
