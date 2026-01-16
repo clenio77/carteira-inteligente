@@ -21,6 +21,7 @@ import {
   Landmark,
   Calculator,
   Wallet,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationsMenu from "@/components/notifications-menu";
@@ -206,6 +207,12 @@ export default function DashboardPage() {
                 <Button variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50">
                   <Calculator className="w-4 h-4 mr-2" />
                   Preço Teto
+                </Button>
+              </Link>
+              <Link href="/dashboard/report">
+                <Button variant="outline" className="border-purple-500 text-purple-600 hover:bg-purple-50">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Relatório IA
                 </Button>
               </Link>
               <NotificationsMenu />

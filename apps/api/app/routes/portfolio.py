@@ -275,3 +275,59 @@ async def get_asset_detail(
         "total_proceeds": round(total_proceeds, 2),
     }
 
+
+@router.get("/report")
+async def generate_portfolio_report(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Gera um relatório gerencial completo da carteira usando IA.
+    
+    Inclui:
+    - Resumo executivo
+    - Análise de riscos
+    - Oportunidades identificadas
+    - Recomendações
+    - Projeção de dividendos
+    
+    Usa Gemini 2.5-flash-lite para análise profunda.
+    """
+    from app.services.report_service import ReportService
+    from dataclasses import asdict
+    
+    # Buscar posições do usuário
+    positions = (
+        db.query(AssetPosition)
+        .join(Asset)
+        .filter(AssetPosition.user_id == current_user.id)
+        .all()
+    )
+    
+    if not positions:
+        return {
+            "success": False,
+            "message": "Nenhum ativo na carteira para gerar relatório",
+            "report": None
+        }
+    
+    # Preparar dados dos ativos
+    portfolio_assets = []
+    for pos in positions:
+        portfolio_assets.append({
+            "ticker": pos.asset.ticker,
+            "quantity": pos.quantity,
+            "average_price": pos.average_price,
+            "current_price": pos.current_price or pos.average_price,
+            "sector": pos.asset.sector
+        })
+    
+    # Gerar relatório
+    report = await ReportService.generate_report(portfolio_assets)
+    
+    return {
+        "success": True,
+        "message": "Relatório gerado com sucesso",
+        "report": asdict(report)
+    }
+
