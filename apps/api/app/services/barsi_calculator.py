@@ -194,17 +194,23 @@ class BarsiCalculator:
         
         for div in cash_dividends:
             try:
-                # payment_date format: "2024-05-15 00:00:00" ou similar
+                # BrAPI returns paymentDate in ISO format: "2024-05-15T00:00:00.000Z"
                 payment_date = div.get("paymentDate", "")
                 if payment_date:
+                    # Extract year from ISO date
                     year = int(payment_date[:4])
-                    # Considerar apenas últimos N anos
-                    if year >= current_year - BarsiCalculator.YEARS_HISTORY:
-                        value = float(div.get("value", 0))
-                        dividend_by_year[year] = dividend_by_year.get(year, 0) + value
+                    # Considerar apenas últimos N anos (não incluir ano futuro)
+                    if year >= current_year - BarsiCalculator.YEARS_HISTORY and year <= current_year:
+                        # BrAPI uses 'rate' not 'value' for dividend amount
+                        value = float(div.get("rate", 0) or div.get("value", 0))
+                        if value > 0:
+                            dividend_by_year[year] = dividend_by_year.get(year, 0) + value
+                            logger.debug(f"Added dividend: year={year}, value={value}")
             except (ValueError, TypeError) as e:
+                logger.warning(f"Error parsing dividend: {e}, data={div}")
                 continue
         
+        logger.info(f"Grouped dividends by year: {dividend_by_year}")
         return dividend_by_year
     
     @staticmethod
