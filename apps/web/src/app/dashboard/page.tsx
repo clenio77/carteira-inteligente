@@ -194,6 +194,12 @@ export default function DashboardPage() {
                   Gestão Financeira
                 </Button>
               </Link>
+              <Link href="/dashboard/proceeds">
+                <Button variant="outline" className="border-green-500 text-green-600 hover:bg-green-50">
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Proventos
+                </Button>
+              </Link>
               <NotificationsMenu />
             </div>
           </div>
