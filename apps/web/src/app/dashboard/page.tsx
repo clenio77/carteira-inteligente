@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationsMenu from "@/components/notifications-menu";
+import { MobileMenu } from "@/components/mobile-menu";
 import { MarketTicker } from "@/components/market-ticker";
 import { PortfolioHistoryChart } from "@/components/dashboard/portfolio-history-chart";
 import { DividendChart } from "@/components/dashboard/dividend-chart";
@@ -174,51 +175,55 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="flex flex-col gap-4 mb-8">
-            {/* Top row: Title and Notifications */}
+            {/* Top row: Title, Mobile Menu and Notifications */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <TrendingUp className="w-8 h-8 text-primary-600" />
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+              <div className="flex items-center gap-3">
+                {/* Mobile Menu - only visible on mobile */}
+                <MobileMenu />
+                <TrendingUp className="w-7 h-7 md:w-8 md:h-8 text-primary-600" />
+                <h1 className="text-xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
               </div>
-              <NotificationsMenu />
+              <div className="flex items-center gap-2">
+                <NotificationsMenu />
+              </div>
             </div>
 
-            {/* Action buttons - scrollable on mobile */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap scrollbar-hide">
-              <Link href="/dashboard/add-assets" className="flex-shrink-0">
+            {/* Action buttons - hidden on mobile, visible on md+ */}
+            <div className="hidden md:flex items-center gap-2 flex-wrap">
+              <Link href="/dashboard/add-assets">
                 <Button size="sm" className="whitespace-nowrap">
                   <Plus className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">Adicionar</span> Ativos
+                  Adicionar Ativos
                 </Button>
               </Link>
-              <Link href="/dashboard/market" className="flex-shrink-0">
+              <Link href="/dashboard/market">
                 <Button variant="outline" size="sm" className="whitespace-nowrap">
                   <BarChart3 className="w-4 h-4 mr-1.5" />
                   Cotações
                 </Button>
               </Link>
-              <Link href="/dashboard/finance" className="flex-shrink-0">
+              <Link href="/dashboard/finance">
                 <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 whitespace-nowrap">
                   <DollarSign className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">Gestão</span> Financeira
+                  Gestão Financeira
                 </Button>
               </Link>
-              <Link href="/dashboard/proceeds" className="flex-shrink-0">
+              <Link href="/dashboard/proceeds">
                 <Button variant="outline" size="sm" className="border-green-500 text-green-600 hover:bg-green-50 whitespace-nowrap">
                   <TrendingUp className="w-4 h-4 mr-1.5" />
                   Proventos
                 </Button>
               </Link>
-              <Link href="/dashboard/barsi" className="flex-shrink-0">
+              <Link href="/dashboard/barsi">
                 <Button variant="outline" size="sm" className="border-amber-500 text-amber-600 hover:bg-amber-50 whitespace-nowrap">
                   <Calculator className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">Preço</span> Teto
+                  Preço Teto
                 </Button>
               </Link>
-              <Link href="/dashboard/report" className="flex-shrink-0">
+              <Link href="/dashboard/report">
                 <Button variant="outline" size="sm" className="border-purple-500 text-purple-600 hover:bg-purple-50 whitespace-nowrap">
                   <FileText className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">Relatório</span> IA
+                  Relatório IA
                 </Button>
               </Link>
             </div>
