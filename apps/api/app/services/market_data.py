@@ -102,6 +102,34 @@ class MarketDataService:
             {"date": "2023-05-15", "value": 1.15, "type": "Dividendo"},
             {"date": "2023-08-15", "value": 0.90, "type": "Dividendo"},
             {"date": "2023-11-15", "value": 1.00, "type": "Dividendo"}
+        ],
+        "XPML11": [
+            {"date": "2024-01-25", "value": 0.90, "type": "Rendimento"},
+            {"date": "2024-02-25", "value": 0.92, "type": "Rendimento"},
+            {"date": "2024-03-25", "value": 0.90, "type": "Rendimento"},
+            {"date": "2024-04-25", "value": 0.91, "type": "Rendimento"},
+            {"date": "2024-05-25", "value": 0.92, "type": "Rendimento"},
+            {"date": "2024-06-25", "value": 0.90, "type": "Rendimento"},
+            {"date": "2024-07-25", "value": 0.93, "type": "Rendimento"},
+            {"date": "2024-08-25", "value": 0.92, "type": "Rendimento"},
+            {"date": "2024-09-25", "value": 0.90, "type": "Rendimento"},
+            {"date": "2024-10-25", "value": 0.92, "type": "Rendimento"},
+            {"date": "2024-11-25", "value": 0.92, "type": "Rendimento"},
+            {"date": "2024-12-25", "value": 0.95, "type": "Rendimento"}
+        ],
+        "MXRF11": [
+            {"date": "2024-01-15", "value": 0.10, "type": "Rendimento"},
+            {"date": "2024-02-15", "value": 0.10, "type": "Rendimento"},
+            {"date": "2024-03-15", "value": 0.10, "type": "Rendimento"},
+            {"date": "2024-04-15", "value": 0.11, "type": "Rendimento"},
+            {"date": "2024-05-15", "value": 0.10, "type": "Rendimento"},
+            {"date": "2024-06-15", "value": 0.09, "type": "Rendimento"},
+            {"date": "2024-07-15", "value": 0.10, "type": "Rendimento"},
+            {"date": "2024-08-15", "value": 0.09, "type": "Rendimento"},
+            {"date": "2024-09-15", "value": 0.10, "type": "Rendimento"},
+            {"date": "2024-10-15", "value": 0.11, "type": "Rendimento"},
+            {"date": "2024-11-15", "value": 0.09, "type": "Rendimento"},
+            {"date": "2024-12-15", "value": 0.10, "type": "Rendimento"}
         ]
     }
 
