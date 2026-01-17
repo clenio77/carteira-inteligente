@@ -101,28 +101,25 @@ export default function PortfolioReportPage() {
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-10 print:hidden">
                 <div className="max-w-6xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 md:gap-4">
                             <Link href="/dashboard">
-                                <Button variant="ghost" size="sm">
-                                    <ArrowLeft className="w-4 h-4 mr-2" />
-                                    Voltar
+                                <Button variant="ghost" size="sm" className="px-2 md:px-4">
+                                    <ArrowLeft className="w-4 h-4 md:mr-2" />
+                                    <span className="hidden md:inline">Voltar</span>
                                 </Button>
                             </Link>
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <FileText className="w-5 h-5 text-primary-600" />
-                                    Relatório Gerencial
+                            <div className="truncate">
+                                <h1 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-primary-600 shrink-0" />
+                                    <span className="truncate">Relatório<span className="hidden sm:inline"> Gerencial</span></span>
                                 </h1>
-                                <p className="text-sm text-gray-500">
-                                    Análise completa da sua carteira com IA
-                                </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             {report && (
-                                <Button variant="outline" size="sm" onClick={handlePrint}>
+                                <Button variant="outline" size="sm" onClick={handlePrint} className="hidden sm:flex">
                                     <Printer className="w-4 h-4 mr-2" />
                                     Imprimir
                                 </Button>
@@ -130,16 +127,18 @@ export default function PortfolioReportPage() {
                             <Button
                                 onClick={handleGenerateReport}
                                 disabled={isGenerating || isLoading}
+                                size="sm"
                             >
                                 {isGenerating ? (
                                     <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Gerando...
+                                        <Loader2 className="w-4 h-4 md:mr-2 animate-spin" />
+                                        <span className="hidden md:inline">Gerando...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <RefreshCw className="w-4 h-4 mr-2" />
-                                        {report ? "Atualizar" : "Gerar Relatório"}
+                                        <RefreshCw className="w-4 h-4 md:mr-2" />
+                                        <span className="hidden md:inline">{report ? "Atualizar" : "Gerar"}</span>
+                                        <span className="inline md:hidden">{report ? "" : "Gerar"}</span>
                                     </>
                                 )}
                             </Button>
@@ -152,16 +151,16 @@ export default function PortfolioReportPage() {
             <div className="max-w-6xl mx-auto px-4 py-6">
                 {/* Initial State */}
                 {!report && !isGenerating && !isLoading && (
-                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                        <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                    <div className="bg-white rounded-xl shadow-sm p-6 md:p-12 text-center">
+                        <FileText className="w-12 h-12 md:w-16 md:h-16 text-gray-300 mx-auto mb-4" />
+                        <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
                             Relatório Gerencial da Carteira
                         </h2>
-                        <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                        <p className="text-sm md:text-base text-gray-500 mb-6 max-w-md mx-auto">
                             Gere um relatório completo com análise de cada ativo,
-                            riscos, oportunidades e recomendações personalizadas usando IA.
+                            riscos, oportunidades e recomendações personalizadas com IA.
                         </p>
-                        <Button size="lg" onClick={handleGenerateReport}>
+                        <Button size="lg" onClick={handleGenerateReport} className="w-full sm:w-auto">
                             <FileText className="w-5 h-5 mr-2" />
                             Gerar Relatório
                         </Button>

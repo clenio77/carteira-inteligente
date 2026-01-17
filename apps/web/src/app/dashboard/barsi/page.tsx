@@ -114,11 +114,11 @@ export default function BarsiCalculatorPage() {
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                <Calculator className="w-6 h-6 text-primary-600" />
-                                Calculadora Preço Teto Barsi
+                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                <Calculator className="w-5 h-5 md:w-6 md:h-6 text-primary-600 shrink-0" />
+                                <span className="truncate">Calculadora Preço Teto</span>
                             </h1>
-                            <p className="text-gray-500">
+                            <p className="text-sm md:text-base text-gray-500">
                                 Metodologia de Luiz Barsi para avaliar ações por dividendos
                             </p>
                         </div>
@@ -261,7 +261,7 @@ export default function BarsiCalculatorPage() {
                                 </div>
 
                                 {/* Metrics */}
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     {/* Dividend Yield */}
                                     <div className="text-center p-3 bg-gray-50 rounded-lg">
                                         <p className="text-xs text-gray-500">Yield Atual</p>
@@ -315,11 +315,11 @@ export default function BarsiCalculatorPage() {
                                     {analysis.dividend_history.map((item) => (
                                         <div key={item.year} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                             <span className="font-medium text-gray-700">{item.year}</span>
-                                            <div className="flex items-center gap-4">
-                                                <span className="text-green-600 font-semibold">
+                                            <div className="flex items-center gap-2 sm:gap-4">
+                                                <span className="text-green-600 font-semibold text-sm sm:text-base">
                                                     {formatCurrency(item.total)} / ação
                                                 </span>
-                                                <div className="w-32 bg-gray-200 rounded-full h-2">
+                                                <div className="w-16 sm:w-32 bg-gray-200 rounded-full h-2">
                                                     <div
                                                         className="bg-green-500 h-2 rounded-full"
                                                         style={{
